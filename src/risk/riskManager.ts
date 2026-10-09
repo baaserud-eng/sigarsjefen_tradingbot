@@ -18,6 +18,8 @@ export interface Position {
   symbol?: string;
   sizeSol: number;
   entryPrice: number;
+  /** Antall tokens kjøpt, i minste enhet (som tekst fordi tallet kan bli veldig stort) */
+  tokenAmountRaw?: string;
   openedAt: string;
 }
 
@@ -25,6 +27,8 @@ export interface RiskState {
   day: string; // YYYY-MM-DD (UTC)
   dayStartBalanceSol: number;
   realizedPnlSol: number;
+  /** Total gevinst/tap siden start, brukes til simulert saldo i DRY_RUN */
+  totalRealizedPnlSol: number;
   halted: boolean;
   openPositions: Position[];
 }
@@ -47,9 +51,11 @@ export class RiskManager {
       day: today(this.now()),
       dayStartBalanceSol: startBalanceSol,
       realizedPnlSol: 0,
+      totalRealizedPnlSol: 0,
       halted: false,
       openPositions: [],
     };
+    this.state.totalRealizedPnlSol ??= 0;
     this.rollDay(startBalanceSol);
   }
 
@@ -93,6 +99,7 @@ export class RiskManager {
   recordClose(mint: string, pnlSol: number): boolean {
     this.state.openPositions = this.state.openPositions.filter((p) => p.mint !== mint);
     this.state.realizedPnlSol += pnlSol;
+    this.state.totalRealizedPnlSol += pnlSol;
     if (-this.state.realizedPnlSol >= this.lossLimitSol) this.state.halted = true;
     this.save();
     return this.state.halted;

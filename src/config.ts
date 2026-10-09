@@ -25,6 +25,18 @@ const schema = z.object({
   TAKE_PROFIT_PCT: num(50).pipe(z.number().positive()),
   PAPER_START_SOL: num(1).pipe(z.number().positive()),
 
+  MAX_HOLD_MINUTES: num(60).pipe(z.number().positive()),
+  MIN_SOL_RESERVE: num(0.02).pipe(z.number().min(0)),
+
+  /** Gratis nøkkel fra portal.jup.ag. Uten nøkkel brukes lite-api, som Jupiter skal fase ut. */
+  JUPITER_API_KEY: z.string().optional().default(""),
+  JUPITER_API_URL: z.string().optional().default(""),
+  SLIPPAGE_BPS: num(1000).pipe(z.number().int().min(1).max(5000)),
+  PRIORITY_FEE_MAX_LAMPORTS: num(200000).pipe(z.number().int().min(0)),
+
+  SCAN_INTERVAL_SEC: num(30).pipe(z.number().min(5)),
+  CHECK_POSITIONS_SEC: num(10).pipe(z.number().min(3)),
+
   MIN_SAFETY_SCORE: num(70).pipe(z.number().min(0).max(100)),
   MIN_LIQUIDITY_USD: num(15000).pipe(z.number().min(0)),
   MAX_TOP10_HOLDER_PCT: num(30).pipe(z.number().min(0).max(100)),
@@ -45,6 +57,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const cfg = parsed.data;
   if (!cfg.DRY_RUN && !cfg.BOT_WALLET_PRIVATE_KEY) {
     throw new Error("DRY_RUN=false krever BOT_WALLET_PRIVATE_KEY i .env");
+  }
+  if (!cfg.JUPITER_API_URL) {
+    cfg.JUPITER_API_URL = cfg.JUPITER_API_KEY ? "https://api.jup.ag/swap/v1" : "https://lite-api.jup.ag/swap/v1";
   }
   return cfg;
 }

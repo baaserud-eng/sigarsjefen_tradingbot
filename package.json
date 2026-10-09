@@ -12,7 +12,10 @@
     "dev": "tsx watch src/index.ts",
     "check": "tsx src/cli/check.ts",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "wallet": "tsx src/cli/wallet.ts",
+    "wallet:new": "tsx src/cli/wallet.ts new",
+    "swaptest": "tsx src/cli/swapTest.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.0",

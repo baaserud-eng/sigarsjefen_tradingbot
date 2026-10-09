@@ -2,7 +2,7 @@
 
 Solana memecoin-bot som skanner nye tokens, sjekker dem for rug-risiko, kopierer de mest lønnsomme traderne og styrer risikoen automatisk.
 
-> **Status:** grunnmur. Konfig, sikkerhetssjekk av tokens og risikostyring er på plass. Skanner, copytrade og kjøp/salg via Jupiter kommer i neste steg.
+> **Status:** kan handle. Boten finner nye tokens på DexScreener, sjekker dem for rug-risiko, kjøper via Jupiter og selger ved stop-loss, take-profit eller tidsgrense. Reddit, X, pump.fun og FOMO-copytrade kommer senere.
 
 ## Kom i gang
 
@@ -10,22 +10,57 @@ Du trenger [Node.js](https://nodejs.org) versjon 20 eller nyere.
 
 ```bash
 npm install
-cp .env.example .env     # på Windows: copy .env.example .env
-npm test                 # kjører testene
-npm start                # starter boten (DRY RUN som standard)
+npm test
 ```
+
+### 1. Lag en bot-wallet
+
+```bash
+npm run wallet:new
+```
+
+Dette lager `.env` (hvis den ikke finnes), lager en helt ny wallet og lagrer private key der. Adressen skrives ut. **Ta backup av `.env`**: mister du filen, mister du pengene.
+
+### 2. Kjør i DRY RUN først
+
+`.env` har `DRY_RUN=true`. Da gjør boten alt på ekte, bortsett fra å sende transaksjoner: den skanner, sjekker, henter ekte priser fra Jupiter og "kjøper" og "selger" med en simulert saldo.
+
+```bash
+npm start
+```
+
+La den gå noen timer. Hvis den simulerte saldoen går ned, vil den ekte også gjøre det.
+
+### 3. Send SOL til walleten
+
+Send et lite beløp fra Phantom eller en børs til adressen fra steg 1. Sjekk saldoen:
+
+```bash
+npm run wallet
+```
+
+### 4. Test ekte kjøp og salg
+
+```bash
+npm run swaptest
+```
+
+Bytter 0.002 SOL til USDC og tilbake. Koster rundt 0.0005 SOL og viser at transaksjonene går gjennom.
+
+### 5. Skru på LIVE
+
+Sett `DRY_RUN=false` i `.env` og start boten:
+
+```bash
+npm start
+```
+
+Boten venter 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`. Stopper du boten, blir åpne posisjoner liggende i walleten og sjekkes igjen neste gang den starter.
 
 ### Sjekk en token manuelt
 
 ```bash
 npm run check <mint-adresse>
-```
-
-Eksempel på svar:
-
-```
-$BONK  score 100/100  GODKJENT  (grense 70)
-  Ingen funn.
 ```
 
 ## Sikkerhet
@@ -56,18 +91,27 @@ Pooler, bonding curves og andre program-eide kontoer telles ikke som holdere.
 Styres fra `.env`:
 
 - **`MAX_SOL_PER_TRADE`**: maks innsats per handel
-- **`DAILY_LOSS_LIMIT_PCT`**: boten stopper all handel resten av dagen (UTC) når tapet når denne grensen. Innsatsen krympes også automatisk slik at én handel ikke kan bryte grensen.
+- **`DAILY_LOSS_LIMIT_PCT`**: boten stopper alle nye kjøp resten av dagen (UTC) når tapet når denne grensen. Én handel er aldri større enn det som er igjen av grensen. Med 1 SOL og 5 % blir hver handel derfor maks 0.05 SOL.
 - **`MAX_OPEN_POSITIONS`**: maks antall åpne posisjoner samtidig
-- **`STOP_LOSS_PCT`** og **`TAKE_PROFIT_PCT`**: brukes når kjøp/salg kobles på
+- **`STOP_LOSS_PCT`** og **`TAKE_PROFIT_PCT`**: selg ved så mye tap eller gevinst. Memecoins kan falle mer enn stop-loss mellom to sjekker, så et tap kan bli større.
+- **`MAX_HOLD_MINUTES`**: selg uansett etter så mange minutter
+- **`MIN_SOL_RESERVE`**: SOL som alltid blir igjen til gebyrer
 
-Tilstanden lagres i `data/state.json`, så en omstart nullstiller ikke dagstapet.
+En token som ikke lenger har noen pris (typisk etter en rug) regnes som tapt etter 6 forsøk på rad.
+
+Tilstanden lagres i `data/state-live.json` (og `data/state-dryrun.json` for simulering), så en omstart nullstiller ikke dagstapet.
 
 ## Struktur
 
 ```
 src/
-├── index.ts            hovedløkke
+├── index.ts            hovedløkke: skann -> sjekk -> kjøp, og sjekk posisjoner -> selg
+├── trader.ts           kjøps- og salgslogikk
 ├── config.ts           leser og validerer .env
+├── scanner/
+│   └── dexscreener.ts  nye og boostede Solana-tokens
+├── exec/
+│   └── jupiter.ts      kjøp og salg via Jupiter
 ├── core/
 │   ├── logger.ts       logger alle hendelser til data/events.jsonl (for dashboardet)
 │   └── wallet.ts       bot-wallet og saldo
@@ -77,12 +121,13 @@ src/
 ├── risk/
 │   └── riskManager.ts  risikostyring og dagstap-grense
 └── cli/
-    └── check.ts        npm run check <mint>
+    ├── check.ts        npm run check <mint>
+    ├── wallet.ts       npm run wallet / wallet:new
+    └── swapTest.ts     npm run swaptest
 ```
 
 ## Neste steg
 
-1. **Skanner:** nye tokens fra pump.fun, Reddit og X
+1. **Flere kilder:** pump.fun, Reddit og X
 2. **Copytrade:** følge topp-wallets fra FOMO
-3. **Executor:** kjøp og salg via Jupiter, med stop-loss og take-profit
-4. **Rapportering:** Telegram-varsler og kobling til dashboardet
+3. **Rapportering:** Telegram-varsler og kobling til dashboardet
