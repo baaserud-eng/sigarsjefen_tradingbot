@@ -4,6 +4,10 @@ Solana memecoin-bot som skanner nye tokens, sjekker dem for rug-risiko, kopierer
 
 > **Status:** kan handle, og har et dashboard i nettleseren. Boten finner nye tokens på DexScreener, sjekker dem for rug-risiko, kjøper via Jupiter og selger ved stop-loss, take-profit eller tidsgrense. Reddit, X, pump.fun og FOMO-copytrade kommer senere.
 
+## Raskeste start (Windows)
+
+Last ned koden (**Code** → **Download ZIP**), pakk den ut og dobbeltklikk **Start Sigarsjefen.bat**. Den installerer Node.js og pakkene hvis de mangler, starter boten i DRY RUN og åpner dashboardet.
+
 ## Kom i gang
 
 Du trenger [Node.js](https://nodejs.org) versjon 20 eller nyere.
