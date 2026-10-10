@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sigarsjefen Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Terminal-desk: statuslinje øverst, rutenett med paneler, skanner-kartet i midten og loggen nederst. Bevisst bare mørkt tema. */
+:root{
+  color-scheme:dark;
+  --bg:#0a0710; --panel:#110c18; --line:#2a1f36; --line-hi:#4a3460;
+  --fg:#e9e2f0; --dim:#8f84a0; --faint:#5b5168;
+  --accent:#ff3d9a; --accent-soft:rgba(255,61,154,.14);
+  --up:#2fe0a0; --down:#ff4d5e; --warn:#ffb347; --info:#7aa8ff;
+  --display:"Chakra Petch","Arial Narrow",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--mono);font-size:12px;padding:12px 16px 24px;font-variant-numeric:tabular-nums}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border:1px solid var(--line);background:var(--panel);padding:8px 12px;margin-bottom:10px}
+.brand{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.brand b{color:var(--accent)}
+.kv{color:var(--dim);font-size:11px;letter-spacing:.04em}
+.kv span{color:var(--fg);margin-left:6px}
+.pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid currentColor}
+.pill.dry{color:var(--warn)} .pill.live{color:var(--up)} .pill.off{color:var(--down)}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up)}
+.dot.paused{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.dot.halted,.dot.off{background:var(--down);box-shadow:0 0 8px var(--down)}
+.right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.clock{font-family:var(--display);font-size:16px;font-weight:500}
+.btn{background:transparent;border:1px solid var(--line-hi);padding:5px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.sell{padding:2px 8px;font-size:10px}
+.btn.confirm{border-color:var(--down);color:var(--down)}
+.banner{display:none;border:1px solid var(--down);color:var(--down);background:rgba(255,77,94,.08);padding:8px 12px;margin-bottom:10px}
+.banner.show{display:block}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px}
+.p{border:1px solid var(--line);background:var(--panel);padding:10px 12px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.p.hot{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft) inset}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.ph strong{color:var(--fg);font-weight:500}
+.c-eq{grid-column:span 3}.c-chart{grid-column:span 6}.c-wal{grid-column:span 3}
+.c-map{grid-column:span 7}.c-pos{grid-column:span 5}
+.c-log{grid-column:span 8}.c-risk{grid-column:span 4}
+@media (max-width:1100px){.c-eq,.c-wal,.c-risk{grid-column:span 6}.c-chart,.c-map,.c-pos,.c-log{grid-column:span 12}}
+@media (max-width:640px){.grid>*{grid-column:span 12!important}.right{margin-left:0}}
+.big{font-family:var(--display);font-size:36px;font-weight:700;line-height:1}
+.big small{font-size:16px;color:var(--dim)}
+.up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.muted{color:var(--faint)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid var(--line);padding-top:8px}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.stats i{font-style:normal;color:var(--faint);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.stats b{font-weight:500;font-size:14px}
+canvas{display:block;width:100%}
+#eqc{height:170px}#map{height:260px}#spark{height:40px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+td,th{padding:5px 0 5px 8px;text-align:right;white-space:nowrap}
+td:first-child,th:first-child{text-align:left;padding-left:0}
+th{color:var(--faint);font-weight:400;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+tr+tr td{border-top:1px solid var(--line)}
+.tick{font-weight:600;text-decoration:none}
+.tick:hover{color:var(--accent)}
+.empty{color:var(--faint);padding:14px 0;line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--dim);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--c);vertical-align:-1px}
+.log{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;font-size:11px}
+.log div{display:grid;grid-template-columns:62px 82px minmax(0,1fr);gap:10px}
+.log time{color:var(--faint)}
+.log .msg{color:var(--dim);overflow-wrap:anywhere}
+.tag{font-size:10px;letter-spacing:.06em}
+.meter{height:6px;background:var(--line);position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--accent);transition:width .4s}
+.rule{display:flex;justify-content:space-between;gap:8px;color:var(--dim)}
+.rule b{color:var(--fg);font-weight:500}
+.addr{display:flex;gap:8px;align-items:center;min-width:0}
+.addr code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg);font-family:var(--mono)}
+.note{color:var(--faint);font-size:10px;line-height:1.5;margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">Sigar<b>sjefen</b> // desk</div>
+  <span class="pill dry" id="mode">Kobler til…</span>
+  <div class="status"><i class="dot" id="dot"></i><span id="status">–</span></div>
+  <div class="kv">Saldo<span id="bal">–</span></div>
+  <div class="kv">Skannet<span id="scanned">0</span></div>
+  <div class="kv">Rugs avvist<span id="rugs">0</span></div>
+  <div class="kv">Oppetid<span id="uptime">–</span></div>
+  <div class="right">
+    <button class="btn" id="toggle" type="button">Pause kjøp</button>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="banner" id="offline">Mistet kontakt med boten. Sjekk at <b>npm start</b> fortsatt kjører i terminalen.</div>
+
+<main class="grid">
+  <section class="p c-eq hot">
+    <div class="ph">Realisert PnL <strong>totalt</strong></div>
+    <div class="big" id="pnl">+0.0000<small> SOL</small></div>
+    <div class="kv" style="margin:0">I dag<span id="pnlday">+0.0000 SOL</span></div>
+    <canvas id="spark" aria-hidden="true"></canvas>
+    <div class="stats">
+      <div><i>Handler</i><b id="trades">0</b></div>
+      <div><i>Treff</i><b id="wr">–</b></div>
+      <div><i>Beste</i><b class="up" id="best">–</b></div>
+    </div>
+  </section>
+
+  <section class="p c-chart">
+    <div class="ph">Saldo over tid <strong id="eqlast">–</strong></div>
+    <canvas id="eqc" role="img" aria-label="Graf over saldo"></canvas>
+  </section>
+
+  <section class="p c-wal">
+    <div class="ph">Bot-wallet</div>
+    <div class="addr"><code id="addr">–</code><button class="btn sell" id="copy" type="button">Kopier</button></div>
+    <a class="note" id="solscan" href="#" target="_blank" rel="noopener" hidden>Åpne på Solscan ↗</a>
+    <p class="note" id="walnote">I DRY RUN brukes en simulert saldo. Ingen ekte SOL flyttes.</p>
+  </section>
+
+  <section class="p c-map">
+    <div class="ph">Skanner · siste time <strong>høyde = sikkerhetsscore</strong></div>
+    <canvas id="map" role="img" aria-label="Tokens boten har sjekket"></canvas>
+    <div class="legend">
+      <span style="--c:var(--up)">Kjøpt</span><span style="--c:var(--warn)">Godkjent, ikke kjøpt</span><span style="--c:var(--info)">For lav score</span><span style="--c:var(--down)">Rug-risiko</span>
+    </div>
+  </section>
+
+  <section class="p c-pos">
+    <div class="ph">Åpne posisjoner <strong id="poscount">0</strong></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Token</th><th>Innsats</th><th>Verdi</th><th>PnL</th><th>Alder</th><th></th></tr></thead>
+        <tbody id="pos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="p c-log">
+    <div class="ph">Hendelser <strong>live</strong></div>
+    <div class="log" id="log" aria-live="polite"></div>
+  </section>
+
+  <section class="p c-risk">
+    <div class="ph">Risikoregler</div>
+    <div class="rule">Dagens tap <b><span id="lossuse">0.0</span>% av grensen</b></div>
+    <div class="meter"><i id="lossbar" style="width:0%"></i></div>
+    <div class="rule">Maks per handel <b id="r-max">–</b></div>
+    <div class="rule">Stop-loss / take-profit <b id="r-sltp">–</b></div>
+    <div class="rule">Selg etter <b id="r-hold">–</b></div>
+    <div class="rule">Maks åpne posisjoner <b id="r-pos">–</b></div>
+    <div class="rule">Min. sikkerhetsscore <b id="r-score">–</b></div>
+    <div class="rule">Min. likviditet <b id="r-liq">–</b></div>
+    <div class="rule">Topp-10 holdere <b id="r-top">–</b></div>
+    <p class="note">Reglene endres i .env. Start boten på nytt etterpå.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+const $ = (id) => document.getElementById(id);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { up: css("--up"), down: css("--down"), warn: css("--warn"), info: css("--info"), acc: css("--accent"), line: css("--line"), faint: css("--faint"), dim: css("--dim"), fg: css("--fg") };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sol = (n, d = 4) => (n >= 0 ? "+" : "") + n.toFixed(d);
+const short = (m) => m.slice(0, 4) + "…" + m.slice(-4);
+const tokName = (sym, mint) => (sym ? "$" + sym : short(mint));
+let state = null;
+let confirmMint = null;
+
+function prep(cv) {
+  const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+  cv.width = r.width * d; cv.height = r.height * d;
+  const x = cv.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return [x, r.width, r.height];
+}
+
+function drawLine(cv, pts, grid) {
+  const [x, w, h] = prep(cv);
+  x.font = '10px "IBM Plex Mono", monospace';
+  if (pts.length < 2) {
+    if (grid) { x.fillStyle = C.faint; x.fillText("Grafen fylles etter hvert som boten kjører.", 4, h / 2); }
+    return;
+  }
+  const pad = grid ? { l: 4, r: 52, t: 8, b: 16 } : { l: 0, r: 4, t: 4, b: 4 };
+  const vals = pts.map((p) => p[1]);
+  let mn = Math.min(...vals), mx = Math.max(...vals);
+  if (mx - mn < 1e-6) { mn -= 0.01; mx += 0.01; }
+  const rg = mx - mn;
+  const t0 = new Date(pts[0][0]).getTime(), t1 = new Date(pts[pts.length - 1][0]).getTime() || t0 + 1;
+  const X = (t) => pad.l + ((new Date(t).getTime() - t0) / Math.max(1, t1 - t0)) * (w - pad.l - pad.r);
+  const Y = (v) => pad.t + (1 - (v - mn) / rg) * (h - pad.t - pad.b);
+  if (grid) {
+    x.strokeStyle = C.line; x.lineWidth = 1; x.fillStyle = C.faint; x.textAlign = "left";
+    for (let k = 0; k <= 3; k++) {
+      const v = mn + (rg * k) / 3, y = Y(v);
+      x.beginPath(); x.moveTo(pad.l, y); x.lineTo(w - pad.r, y); x.stroke();
+      x.fillText(v.toFixed(3), w - pad.r + 6, y + 3);
+    }
+    const fmt = (t) => new Date(t).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+    x.fillText(fmt(t0), pad.l, h - 3); x.textAlign = "right"; x.fillText(fmt(t1), w - pad.r, h - 3);
+  }
+  const up = vals[vals.length - 1] >= vals[0], col = up ? C.up : C.down;
+  const g = x.createLinearGradient(0, pad.t, 0, h); g.addColorStop(0, col + "55"); g.addColorStop(1, col + "00");
+  x.beginPath(); pts.forEach((p, i) => (i ? x.lineTo(X(p[0]), Y(p[1])) : x.moveTo(X(p[0]), Y(p[1]))));
+  x.lineTo(X(pts[pts.length - 1][0]), h - pad.b); x.lineTo(X(pts[0][0]), h - pad.b); x.closePath(); x.fillStyle = g; x.fill();
+  x.beginPath(); pts.forEach((p, i) => (i ? x.lineTo(X(p[0]), Y(p[1])) : x.moveTo(X(p[0]), Y(p[1]))));
+  x.strokeStyle = col; x.lineWidth = 1.6; x.stroke();
+  const last = pts[pts.length - 1]; x.beginPath(); x.arc(X(last[0]), Y(last[1]), 3.5, 0, 7); x.fillStyle = C.fg; x.fill();
+}
+
+function drawMap(events, minScore) {
+  const [x, w, h] = prep($("map"));
+  const pb = 16, now = Date.now(), span = 60 * 60 * 1000;
+  x.font = '10px "IBM Plex Mono", monospace';
+  [30, 50, 70, 90].forEach((s) => {
+    const y = pb + (1 - s / 100) * (h - 2 * pb);
+    x.setLineDash([2, 4]); x.strokeStyle = C.line; x.beginPath(); x.moveTo(0, y); x.lineTo(w, y); x.stroke();
+    x.fillStyle = C.faint; x.fillText(String(s), 4, y - 3);
+  });
+  const ty = pb + (1 - minScore / 100) * (h - 2 * pb);
+  x.setLineDash([]); x.strokeStyle = C.acc + "99"; x.beginPath(); x.moveTo(0, ty); x.lineTo(w, ty); x.stroke();
+  const lbl = `kjøpsgrense ${minScore}`, lw = x.measureText(lbl).width;
+  x.fillStyle = css("--panel"); x.fillRect(w - lw - 10, ty - 15, lw + 8, 13);
+  x.fillStyle = C.acc; x.textAlign = "right"; x.fillText(lbl, w - 6, ty - 5); x.textAlign = "left";
+
+  const pts = events.filter((e) => typeof e.data?.score === "number" && now - new Date(e.ts).getTime() < span);
+  if (!pts.length) { x.fillStyle = C.faint; x.fillText("Ingen tokens sjekket den siste timen ennå.", 24, h / 2); return; }
+  for (const e of pts) {
+    const px = 24 + (1 - (now - new Date(e.ts).getTime()) / span) * (w - 120);
+    const py = pb + (1 - e.data.score / 100) * (h - 2 * pb);
+    const c = e.type === "buy" ? C.up : e.type === "risk_block" ? C.warn : e.type === "rug" ? C.down : C.info;
+    const r = e.type === "buy" ? 7 : 4;
+    const g = x.createRadialGradient(px, py, 0, px, py, r * 3); g.addColorStop(0, c + "66"); g.addColorStop(1, c + "00");
+    x.fillStyle = g; x.beginPath(); x.arc(px, py, r * 3, 0, 7); x.fill();
+    x.fillStyle = c; x.beginPath(); x.arc(px, py, r * 0.6, 0, 7); x.fill();
+    if (e.type === "buy") { x.fillStyle = C.fg; x.fillText(tokName(e.data.symbol, e.data.mint || ""), px + 8, py + 3); }
+  }
+}
+
+const TAGS = { buy: ["KJØP", "up"], sell: ["SALG", "up"], stop: ["STOP", "down"], rug: ["RUG", "down"], safety: ["SJEKK", "muted"], risk_block: ["BLOKKERT", "warn"], halt: ["STOPP", "down"], error: ["FEIL", "down"], scan: ["SKANN", "muted"], start: ["START", "muted"], control: ["KONTROLL", "warn"] };
+
+function render(s) {
+  state = s;
+  const live = s.mode === "live";
+  $("mode").className = "pill " + (live ? "live" : "dry");
+  $("mode").textContent = live ? "LIVE · ekte SOL" : "DRY RUN · simulert";
+  const st = s.halted ? ["halted", "Stoppet for i dag"] : s.paused ? ["paused", "Pauset"] : ["", "Kjører"];
+  $("dot").className = "dot " + st[0]; $("status").textContent = st[1];
+  $("toggle").textContent = s.paused ? "Fortsett kjøp" : "Pause kjøp";
+  $("bal").textContent = s.balanceSol.toFixed(4) + " SOL";
+  const up = Math.floor((Date.now() - new Date(s.startedAt).getTime()) / 60000);
+  $("uptime").textContent = up >= 60 ? `${Math.floor(up / 60)}t ${up % 60}m` : `${up}m`;
+  $("scanned").textContent = s.events.filter((e) => typeof e.data?.score === "number").length;
+  $("rugs").textContent = s.events.filter((e) => e.type === "rug" && e.data?.score !== undefined).length;
+
+  const tot = s.stats.realizedSol;
+  $("pnl").innerHTML = `${sol(tot)}<small> SOL</small>`; $("pnl").className = "big " + (tot >= 0 ? "up" : "down");
+  $("pnlday").textContent = sol(s.day.realizedPnlSol) + " SOL"; $("pnlday").className = s.day.realizedPnlSol >= 0 ? "up" : "down";
+  $("trades").textContent = s.stats.trades;
+  $("wr").textContent = s.stats.trades ? Math.round((s.stats.wins / s.stats.trades) * 100) + "%" : "–";
+  $("best").textContent = s.stats.trades ? sol(s.stats.best, 3) : "–";
+
+  const eq = s.equity;
+  $("eqlast").textContent = eq.length ? eq[eq.length - 1][1].toFixed(4) + " SOL" : "–";
+  drawLine($("eqc"), eq, true);
+  drawLine($("spark"), eq.slice(-60), false);
+
+  $("addr").textContent = s.wallet || (live ? "–" : "Simulert (ingen wallet)");
+  $("copy").hidden = !s.wallet;
+  if (s.wallet) { $("solscan").href = "https://solscan.io/account/" + s.wallet; $("solscan").hidden = false; }
+  $("walnote").textContent = live ? "Send SOL til adressen over for å fylle på. Bare send det du er villig til å tape." : "I DRY RUN brukes en simulert saldo. Ingen ekte SOL flyttes.";
+
+  $("poscount").textContent = `${s.positions.length} / ${s.rules.maxOpenPositions}`;
+  $("pos").innerHTML = s.positions.length
+    ? s.positions.map((p) => {
+        const age = Math.floor((Date.now() - new Date(p.openedAt).getTime()) / 60000);
+        const pnl = p.pnlPct;
+        const confirming = confirmMint === p.mint;
+        return `<tr>
+          <td><a class="tick" href="https://dexscreener.com/solana/${esc(p.mint)}" target="_blank" rel="noopener">${esc(tokName(p.symbol, p.mint))}</a></td>
+          <td>${p.sizeSol.toFixed(4)}</td>
+          <td>${p.valueSol !== undefined ? p.valueSol.toFixed(4) : '<span class="muted">…</span>'}</td>
+          <td class="${pnl === undefined ? "muted" : pnl >= 0 ? "up" : "down"}">${pnl === undefined ? "…" : (pnl >= 0 ? "+" : "") + pnl.toFixed(1) + "%"}</td>
+          <td>${age}m</td>
+          <td><button class="btn sell${confirming ? " confirm" : ""}" data-mint="${esc(p.mint)}" type="button">${confirming ? "Bekreft salg" : "Selg"}</button></td>
+        </tr>`;
+      }).join("")
+    : `<tr><td colspan="6" class="empty">Ingen åpne posisjoner. Boten kjøper når en token består sikkerhetssjekken.</td></tr>`;
+
+  const evs = s.events.filter((e) => e.type !== "heartbeat").slice(-60).reverse();
+  $("log").innerHTML = evs.length
+    ? evs.map((e) => {
+        const [tag, cls] = TAGS[e.type] || [e.type.toUpperCase(), "muted"];
+        const t = new Date(e.ts).toLocaleTimeString("nb-NO", { hour12: false });
+        return `<div><time>${t}</time><span class="tag ${cls}">${tag}</span><span class="msg">${esc(e.msg)}</span></div>`;
+      }).join("")
+    : `<div class="empty">Ingen hendelser ennå.</div>`;
+
+  const lossUsed = Math.max(0, -s.day.realizedPnlSol) / (s.day.lossLimitSol || 1) * 100;
+  $("lossuse").textContent = Math.min(100, lossUsed).toFixed(0);
+  $("lossbar").style.width = Math.min(100, lossUsed) + "%";
+  const r = s.rules;
+  $("r-max").textContent = r.maxSolPerTrade + " SOL";
+  $("r-sltp").textContent = `-${r.stopLossPct}% / +${r.takeProfitPct}%`;
+  $("r-hold").textContent = r.maxHoldMinutes + " min";
+  $("r-pos").textContent = r.maxOpenPositions;
+  $("r-score").textContent = r.minSafetyScore + " / 100";
+  $("r-liq").textContent = "$" + Math.round(r.minLiquidityUsd).toLocaleString("nb-NO");
+  $("r-top").textContent = "< " + r.maxTop10HolderPct + "%";
+
+  drawMap(s.events, r.minSafetyScore);
+}
+
+async function refresh() {
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    render(await res.json());
+    $("offline").classList.remove("show");
+  } catch {
+    $("offline").classList.add("show");
+    $("dot").className = "dot off"; $("status").textContent = "Frakoblet";
+  }
+}
+
+async function post(path, body) {
+  const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-sigarsjefen": "1" }, body: JSON.stringify(body || {}) });
+  return res.ok;
+}
+
+$("toggle").addEventListener("click", async () => {
+  if (!state) return;
+  await post(state.paused ? "/api/resume" : "/api/pause");
+  refresh();
+});
+
+$("pos").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-mint]");
+  if (!b) return;
+  const mint = b.dataset.mint;
+  if (confirmMint !== mint) {
+    confirmMint = mint;
+    if (state) render(state);
+    setTimeout(() => { if (confirmMint === mint) { confirmMint = null; if (state) render(state); } }, 4000);
+    return;
+  }
+  confirmMint = null;
+  b.disabled = true; b.textContent = "Selger…";
+  await post("/api/sell", { mint });
+  refresh();
+});
+
+$("copy").addEventListener("click", async () => {
+  const a = $("addr").textContent;
+  try { await navigator.clipboard.writeText(a); $("copy").textContent = "Kopiert"; }
+  catch { getSelection().selectAllChildren($("addr")); $("copy").textContent = "Merket"; }
+  setTimeout(() => ($("copy").textContent = "Kopier"), 1500);
+});
+
+const tick = () => ($("clock").textContent = new Date().toLocaleTimeString("nb-NO", { hour12: false }));
+tick(); setInterval(tick, 1000);
+refresh(); setInterval(refresh, 2000);
+addEventListener("resize", () => state && render(state));
+})();
+</script>
+</body>
+</html>
