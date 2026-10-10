@@ -10,7 +10,13 @@ const PAPER_FEE_SOL = 0.0003;
 /** Antall feilede prisforsøk på rad før en posisjon regnes som tapt (typisk rug: ingen pool igjen) */
 const MAX_PRICE_FAILURES = 6;
 
-export type SellReason = "stop-loss" | "take-profit" | "tidsgrense" | "ingen pris";
+export type SellReason = "stop-loss" | "take-profit" | "tidsgrense" | "ingen pris" | "manuelt";
+
+export interface Valuation {
+  valueSol: number;
+  pnlPct: number;
+  at: string;
+}
 
 export interface TraderDeps {
   cfg: Config;
@@ -26,6 +32,10 @@ export class Trader {
   private priceFailures = new Map<string, number>();
   private busy = new Set<string>();
   private now: () => Date;
+  /** Siste verdi for hver åpen posisjon, vises på dashboardet */
+  readonly valuations = new Map<string, Valuation>();
+  /** Når true kjøper ikke boten nye tokens, men passer fortsatt på åpne posisjoner */
+  paused = false;
 
   constructor(private d: TraderDeps) {
     this.now = d.now ?? (() => new Date());
@@ -43,21 +53,21 @@ export class Trader {
   async consider(mint: string, source: string): Promise<"bought" | "rejected" | "blocked" | "error"> {
     const { cfg, risk, swapper } = this.d;
     if (this.busy.has(mint) || risk.state.openPositions.some((p) => p.mint === mint)) return "blocked";
-    if (risk.state.halted) return "blocked";
+    if (risk.state.halted || this.paused) return "blocked";
     this.busy.add(mint);
     try {
       const safety = await this.d.checkSafety(mint);
       const name = safety.symbol ? `$${safety.symbol}` : short(mint);
       if (!safety.passed) {
         const worst = safety.findings.find((f) => f.severity === "critical") ?? safety.findings[0];
-        log(worst?.severity === "critical" ? "rug" : "safety", `${name} avvist · score ${safety.score} · ${worst?.reason ?? ""}`, { mint, source, score: safety.score });
+        log(worst?.severity === "critical" ? "rug" : "safety", `${name} avvist · score ${safety.score} · ${worst?.reason ?? ""}`, { mint, source, score: safety.score, symbol: safety.symbol });
         return "rejected";
       }
 
       const available = (await this.balanceSol()) - cfg.MIN_SOL_RESERVE;
       const decision = risk.canOpen(mint, cfg.MAX_SOL_PER_TRADE, available);
       if (!decision.ok) {
-        log("risk_block", `${name} godkjent (score ${safety.score}), men ikke kjøpt: ${decision.reason}`, { mint });
+        log("risk_block", `${name} godkjent (score ${safety.score}), men ikke kjøpt: ${decision.reason}`, { mint, source, score: safety.score, symbol: safety.symbol });
         return "blocked";
       }
 
@@ -76,6 +86,9 @@ export class Trader {
       });
       log("buy", `${name} kjøpt for ${sizeSol.toFixed(4)} SOL · score ${safety.score} · kilde ${source}${res.signature ? ` · tx ${res.signature}` : " · (simulert)"}`, {
         mint,
+        symbol: safety.symbol,
+        source,
+        score: safety.score,
         sizeSol,
         tokens: res.outAmount.toString(),
         signature: res.signature,
@@ -116,6 +129,7 @@ export class Trader {
       }
 
       const pnlPct = (valueSol / p.sizeSol - 1) * 100;
+      this.valuations.set(p.mint, { valueSol, pnlPct, at: this.now().toISOString() });
       const ageMin = (this.now().getTime() - new Date(p.openedAt).getTime()) / 60000;
       let reason: SellReason | null = null;
       if (pnlPct <= -cfg.STOP_LOSS_PCT) reason = "stop-loss";
@@ -123,6 +137,14 @@ export class Trader {
       else if (ageMin >= cfg.MAX_HOLD_MINUTES) reason = "tidsgrense";
       if (reason) await this.sell(p.mint, name, p.sizeSol, amount, reason);
     }
+  }
+
+  /** Selg en posisjon med en gang (knappen på dashboardet). */
+  async sellNow(mint: string): Promise<boolean> {
+    const p = this.d.risk.state.openPositions.find((x) => x.mint === mint);
+    if (!p || !p.tokenAmountRaw || this.busy.has(mint)) return false;
+    await this.sell(mint, p.symbol ? `$${p.symbol}` : short(mint), p.sizeSol, BigInt(p.tokenAmountRaw), "manuelt");
+    return !this.d.risk.state.openPositions.some((x) => x.mint === mint);
   }
 
   private async sell(mint: string, name: string, sizeSol: number, amountRaw: bigint, reason: SellReason) {
@@ -139,6 +161,7 @@ export class Trader {
       const outSol = Number(res.outAmount) / LAMPORTS - (cfg.DRY_RUN ? PAPER_FEE_SOL : 0);
       const pnl = outSol - sizeSol;
       const halted = risk.recordClose(mint, pnl);
+      this.valuations.delete(mint);
       log(pnl >= 0 ? "sell" : "stop", `${name} solgt (${reason}) · ${pnl >= 0 ? "+" : ""}${pnl.toFixed(4)} SOL (${((pnl / sizeSol) * 100).toFixed(1)}%)${res.signature ? ` · tx ${res.signature}` : " · (simulert)"}`, {
         mint,
         reason,
@@ -155,6 +178,7 @@ export class Trader {
 
   private closeAsLoss(mint: string, name: string, sizeSol: number) {
     const halted = this.d.risk.recordClose(mint, -sizeSol);
+    this.valuations.delete(mint);
     log("rug", `${name} regnes som tapt (ingen pris eller ingen tokens igjen) · -${sizeSol.toFixed(4)} SOL`, { mint, pnlSol: -sizeSol });
     if (halted) log("halt", `Dagstap-grensen er nådd. Ingen nye kjøp før i morgen (UTC).`);
   }

@@ -34,6 +34,9 @@ const schema = z.object({
   SLIPPAGE_BPS: num(1000).pipe(z.number().int().min(1).max(5000)),
   PRIORITY_FEE_MAX_LAMPORTS: num(200000).pipe(z.number().int().min(0)),
 
+  WEB_ENABLED: bool,
+  WEB_PORT: num(3000).pipe(z.number().int().min(1).max(65535)),
+
   SCAN_INTERVAL_SEC: num(30).pipe(z.number().min(5)),
   CHECK_POSITIONS_SEC: num(10).pipe(z.number().min(3)),
 

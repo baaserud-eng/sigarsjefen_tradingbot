@@ -2,7 +2,7 @@
 
 Solana memecoin-bot som skanner nye tokens, sjekker dem for rug-risiko, kopierer de mest lønnsomme traderne og styrer risikoen automatisk.
 
-> **Status:** kan handle. Boten finner nye tokens på DexScreener, sjekker dem for rug-risiko, kjøper via Jupiter og selger ved stop-loss, take-profit eller tidsgrense. Reddit, X, pump.fun og FOMO-copytrade kommer senere.
+> **Status:** kan handle, og har et dashboard i nettleseren. Boten finner nye tokens på DexScreener, sjekker dem for rug-risiko, kjøper via Jupiter og selger ved stop-loss, take-profit eller tidsgrense. Reddit, X, pump.fun og FOMO-copytrade kommer senere.
 
 ## Kom i gang
 
@@ -56,6 +56,18 @@ npm start
 ```
 
 Boten venter 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`. Stopper du boten, blir åpne posisjoner liggende i walleten og sjekkes igjen neste gang den starter.
+
+## Dashboard
+
+Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du:
+
+- saldo over tid, gevinst/tap og treffprosent
+- åpne posisjoner med verdi og PnL, og en **Selg**-knapp for hver
+- skanner-kart over alle tokens boten har sjekket den siste timen
+- alle hendelser live, og hvor mye av dagens tapsgrense som er brukt
+- knapp for å **pause kjøp** (åpne posisjoner passes fortsatt på)
+
+Dashboardet kan bare åpnes fra samme PC som boten kjører på. Det skal ikke legges ut på nettet, fordi det styrer en wallet med ekte penger. Port endres med `WEB_PORT` i `.env`.
 
 ### Sjekk en token manuelt
 
@@ -112,8 +124,12 @@ src/
 │   └── dexscreener.ts  nye og boostede Solana-tokens
 ├── exec/
 │   └── jupiter.ts      kjøp og salg via Jupiter
+├── web/
+│   ├── server.ts       dashboard-server (bare localhost)
+│   ├── dashboard.html  selve nettsiden
+│   └── equity.ts       saldo over tid
 ├── core/
-│   ├── logger.ts       logger alle hendelser til data/events.jsonl (for dashboardet)
+│   ├── logger.ts       logger alle hendelser til data/events-*.jsonl
 │   └── wallet.ts       bot-wallet og saldo
 ├── safety/
 │   ├── fetchFacts.ts   henter token-data fra Solana RPC og DexScreener
@@ -130,4 +146,4 @@ src/
 
 1. **Flere kilder:** pump.fun, Reddit og X
 2. **Copytrade:** følge topp-wallets fra FOMO
-3. **Rapportering:** Telegram-varsler og kobling til dashboardet
+3. **Varsler:** Telegram-melding ved kjøp, salg og stopp
