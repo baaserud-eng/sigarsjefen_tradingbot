@@ -51,6 +51,8 @@ const schema = z.object({
   // --- Diverse ---
   LOOP_SECONDS: num(20).pipe(z.number().min(5)),
   BACKTEST_DAYS: num(60).pipe(z.number().int().min(5).max(400)),
+  LEARN_ENABLED: bool(true),
+  LEARN_DAYS: num(90).pipe(z.number().int().min(45).max(400)),
   WEB_ENABLED: bool(true),
   WEB_PORT: num(3000).pipe(z.number().int().min(1).max(65535)),
 });

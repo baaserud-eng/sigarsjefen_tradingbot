@@ -43,6 +43,7 @@ I noen uker i mars og oktober/november er tidene én time tidligere, fordi USA o
 npm install        # første gang
 npm run konto      # sjekk innlogging, saldo og markeder
 npm run backtest   # hvordan ville strategien gått de siste 60 dagene?
+npm run learn      # kjør læringen nå og se hva den fant
 npm start          # start boten og dashboardet
 npm test           # kjør testene
 ```
@@ -54,6 +55,18 @@ npm test           # kjør testene
 - **Totalt +10R** betyr ca. +5 % av kontoen med standardinnstillingene.
 - **Profit factor over 1**: gevinstene var større enn tapene. **Under 1**: strategien tapte.
 - Testen er bevisst litt pessimistisk: treffes både stop og mål i samme lys, regnes det som tap.
+
+## Læring: boten blir bedre av egne feil
+
+Boten lærer på tre måter:
+
+1. **Nye innstillinger hver natt.** Etter at markedene har stengt, tester boten 54 kombinasjoner per marked: range 5/15/30 min, mål 1,5/2/3R, frist 60/120 min, og long og short / kun long / kun short. Den leter på de **eldste 2/3** av de siste 90 dagene, og sjekker vinneren på de **nyeste 1/3**, som innstillingene aldri har sett. Den bytter bare når de nye er lønnsomme begge steder og minst 1,5R bedre enn dagens.
+2. **Pause når ingenting virker.** Taper strategien i et marked den siste tiden, og ingenting er tydelig bedre, settes markedet på pause. Pausen oppheves når det snur.
+3. **Halv risiko etter tapsrekker.** Hver handel skrives i en dagbok målt i R. Etter tre tap på rad, eller -3R på de siste 8 handlene, halveres risikoen i det markedet til det går bedre igjen.
+
+Alt boten har lært vises på dashboardet under **Hva boten har lært**, og lagres i `data/learning-*.json`. Du kan også kjøre læringen selv med `npm run learn`.
+
+**Viktig:** Læring på historikk kan lure seg selv. Den kan finne innstillinger som bare passet fortiden. Derfor er kravene for å bytte strenge. I tester på helt tilfeldige priser, der det ikke finnes noe å lære, bytter den likevel innstillinger i omtrent 1 av 8 tilfeller og setter markedet på pause i nesten halvparten. Læringen gjør boten mer forsiktig og tilpasningsdyktig, men den kan ikke garantere fortjeneste.
 
 ## Risikostyring
 
@@ -87,6 +100,11 @@ src/
 ├── markets.ts           markeder og åpningstider
 ├── risk.ts              posisjonsstørrelse og dagstap-grense
 ├── config.ts            leser og sjekker .env
+├── learn/
+│   ├── optimizer.ts     tester innstillinger på lete-periode og eksamen
+│   ├── memory.ts        dagbok, lærte innstillinger og risiko etter tapsrekker
+│   ├── learner.ts       kjører læringen og tar i bruk resultatet
+│   └── history.ts       henter historiske priser
 ├── strategy/
 │   ├── orb.ts           opening range breakout (ren logikk)
 │   └── backtest.ts      simulering på historiske priser
@@ -99,5 +117,6 @@ src/
 ├── web/                 dashboardet
 └── cli/
     ├── backtest.ts      npm run backtest
+    ├── learn.ts         npm run learn
     └── konto.ts         npm run konto
 ```

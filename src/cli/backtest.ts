@@ -9,31 +9,12 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { CapitalBroker } from "../broker/capital.js";
 import { loadConfig, orbParams } from "../config.js";
 import { marketDef } from "../markets.js";
+import { fetchHistory } from "../learn/history.js";
 import { backtest } from "../strategy/backtest.js";
-import type { Candle } from "../strategy/orb.js";
 
 const cfg = loadConfig();
 const broker = new CapitalBroker({ env: cfg.CAPITAL_ENV, apiKey: cfg.CAPITAL_API_KEY, identifier: cfg.CAPITAL_IDENTIFIER, password: cfg.CAPITAL_API_PASSWORD });
 const p = orbParams(cfg);
-
-async function history(epic: string, days: number): Promise<Candle[]> {
-  const out = new Map<number, Candle>();
-  const end = Date.now();
-  const start = end - days * 86_400_000;
-  // 1000 lys à 5 min = ca. 3,4 døgn per kall
-  const chunk = 3 * 86_400_000;
-  for (let from = start; from < end; from += chunk) {
-    const to = Math.min(end, from + chunk);
-    try {
-      for (const c of await broker.candles(epic, new Date(from), new Date(to))) out.set(c.t, c);
-    } catch (e) {
-      const msg = (e as Error).message;
-      if (!msg.includes("(404)") && !msg.includes("(400)")) throw e;
-    }
-    process.stdout.write(".");
-  }
-  return [...out.values()].sort((a, b) => a.t - b.t);
-}
 
 await broker.login();
 console.log(`\nBacktest av opening range breakout · siste ${cfg.BACKTEST_DAYS} dager · range ${p.orbMinutes} min · mål ${p.rewardRisk}R\n`);
@@ -43,7 +24,7 @@ const rows: string[][] = [];
 for (const epic of cfg.MARKETS) {
   const m = marketDef(epic);
   process.stdout.write(`Henter ${epic} `);
-  const candles = await history(epic, cfg.BACKTEST_DAYS);
+  const candles = await fetchHistory(broker, epic, cfg.BACKTEST_DAYS, () => process.stdout.write("."));
   console.log(` ${candles.length} lys`);
   if (!candles.length) {
     rows.push([epic, "ingen data", "", "", "", "", ""]);

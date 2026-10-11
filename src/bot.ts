@@ -12,6 +12,8 @@ import { log } from "./core/logger.js";
 import { hhmm, nyParts, nyToDate, osloClock } from "./core/time.js";
 import type { MarketDef } from "./markets.js";
 import type { AccountInfo, Broker, OpenPosition } from "./broker/types.js";
+import type { LearningMemory } from "./learn/memory.js";
+import { describe } from "./learn/optimizer.js";
 import { DayGuard, positionSize } from "./risk.js";
 import { evaluateDay, type OrbParams, type Phase, type Signal } from "./strategy/orb.js";
 
@@ -31,6 +33,10 @@ export interface MarketView {
   last?: number;
   signal?: Signal;
   note?: string;
+  /** Innstillingene læringen har valgt for markedet */
+  learned?: string;
+  learnedPaused?: boolean;
+  riskMult?: number;
 }
 
 const PHASE_TEXT: Record<Phase, string> = {
@@ -51,6 +57,7 @@ export class Bot {
   views = new Map<string, MarketView>();
   private known = new Map<string, OpenPosition>();
   private noted = new Set<string>();
+  private prevBalance: number | null = null;
 
   constructor(
     private broker: Broker,
@@ -58,7 +65,13 @@ export class Bot {
     private markets: MarketDef[],
     private s: BotSettings,
     private now: () => number = () => Date.now(),
+    private memory?: LearningMemory,
   ) {}
+
+  /** Strategi-innstillingene for et marked: standard, eller det læringen har valgt. */
+  paramsFor(epic: string): OrbParams {
+    return this.memory ? { ...this.s.orb, ...this.memory.market(epic).tunable } : this.s.orb;
+  }
 
   equity(): number {
     if (!this.account) return 0;
@@ -97,19 +110,26 @@ export class Bot {
   /** Posisjoner som har forsvunnet siden sist er stengt (stop, mål eller manuelt). */
   private detectClosed() {
     const current = new Set(this.positions.map((p) => p.dealId));
-    for (const [id, p] of this.known) {
-      if (current.has(id)) continue;
+    const closed = [...this.known.entries()].filter(([id]) => !current.has(id));
+    const balance = this.account?.balance ?? 0;
+    // Lukkes én posisjon, er endringen i saldo det faktiske resultatet. Ellers bruker vi siste kjente verdi.
+    const balanceDelta = this.prevBalance !== null && closed.length === 1 ? balance - this.prevBalance : null;
+    for (const [id, p] of closed) {
       this.known.delete(id);
       const cur = this.account?.currency ?? "";
-      const win = p.upl >= 0;
+      const pnl = balanceDelta ?? p.upl;
+      const win = pnl >= 0;
       const how = p.profitLevel !== undefined && win ? "mål nådd" : p.stopLevel !== undefined && !win ? "stop-loss" : "stengt";
-      log(win ? "sell" : "stop", `${p.epic} ${p.direction === "BUY" ? "long" : "short"} lukket (${how}) · ca. ${win ? "+" : ""}${p.upl.toFixed(2)} ${cur}`, {
+      const r = this.memory?.recordClose(id, pnl) ?? null;
+      log(win ? "sell" : "stop", `${p.epic} ${p.direction === "BUY" ? "long" : "short"} lukket (${how}) · ${balanceDelta === null ? "ca. " : ""}${win ? "+" : ""}${pnl.toFixed(2)} ${cur}${r !== null ? ` (${r >= 0 ? "+" : ""}${r}R)` : ""}`, {
         epic: p.epic,
         dealId: id,
-        pnl: p.upl,
+        pnl,
+        ...(r !== null ? { r } : {}),
       });
     }
     for (const p of this.positions) this.known.set(p.dealId, p);
+    this.prevBalance = balance;
   }
 
   private async handleMarket(m: MarketDef, now: number, ny: ReturnType<typeof nyParts>) {
@@ -124,6 +144,12 @@ export class Bot {
       phase: "closed",
     };
     view.session = `${osloClock(nyToDate(ny.date, open))}–${osloClock(nyToDate(ny.date, close))}`;
+    if (this.memory) {
+      const mem = this.memory.market(m.epic);
+      view.learned = describe(mem.tunable);
+      view.learnedPaused = mem.paused;
+      view.riskMult = this.memory.risk(m.epic).mult;
+    }
     this.views.set(m.epic, view);
 
     const mine = this.positions.filter((p) => p.epic === m.epic);
@@ -153,7 +179,8 @@ export class Bot {
     }
 
     const candles = await this.broker.candles(m.epic, nyToDate(ny.date, open), new Date(now));
-    const ev = evaluateDay(candles, m, this.s.orb, now);
+    const params = this.paramsFor(m.epic);
+    const ev = evaluateDay(candles, m, params, now);
     view.phase = ev.phase;
     view.rangeHigh = ev.rangeHigh;
     view.rangeLow = ev.rangeLow;
@@ -175,6 +202,8 @@ export class Bot {
     );
 
     if (mine.length) return;
+    const mem = this.memory?.market(m.epic);
+    if (mem?.paused) return this.once(`learnpause:${m.epic}`, () => log("risk_block", `${m.epic}: signal ignorert. Læringen har satt markedet på pause: ${mem.reason}`, { epic: m.epic }));
     if (this.paused) return this.once(`paused:${m.epic}`, () => log("risk_block", `${m.epic}: signal ignorert fordi kjøp er pauset`, { epic: m.epic }));
 
     const can = this.guard.canTrade(m.epic);
@@ -191,10 +220,10 @@ export class Bot {
       return;
     }
 
-    await this.enter(m, sig);
+    await this.enter(m, sig, params);
   }
 
-  private async enter(m: MarketDef, sig: Signal) {
+  private async enter(m: MarketDef, sig: Signal, params: OrbParams) {
     const acc = this.account!;
     const info = await this.broker.market(m.epic);
     if (!info.tradeable) {
@@ -209,13 +238,14 @@ export class Bot {
       log("risk_block", `${m.epic}: prisen er allerede tilbake forbi stop-nivået. Hopper over.`, { epic: m.epic });
       return;
     }
-    const target = long ? entry + this.s.orb.rewardRisk * dist : entry - this.s.orb.rewardRisk * dist;
+    const target = long ? entry + params.rewardRisk * dist : entry - params.rewardRisk * dist;
     const dp = decimalsOf(info.bid, info.offer);
 
     const fx = await this.broker.fx(info.currency, acc.currency);
+    const riskAdj = this.memory?.risk(m.epic) ?? { mult: 1, reason: "" };
     const sized = positionSize({
       balance: acc.balance,
-      riskPct: this.s.riskPerTradePct,
+      riskPct: this.s.riskPerTradePct * riskAdj.mult,
       stopDistance: dist,
       fxToAccount: fx,
       minSize: info.minSize,
@@ -237,7 +267,28 @@ export class Bot {
         stopLevel: round(sig.stop, dp),
         profitLevel: round(target, dp),
       });
-      log("buy", `${m.epic} ${long ? "LONG" : "SHORT"} ${sized.size} @ ${fmt(res.level || entry)} · stop ${fmt(sig.stop)} · mål ${fmt(target)} · risiko ca. ${"riskAccount" in sized ? sized.riskAccount.toFixed(2) : "?"} ${acc.currency}`, {
+      // Følg posisjonen fra første stund, så den fanges opp selv om den stenges før neste runde.
+      this.known.set(res.dealId, {
+        dealId: res.dealId,
+        epic: m.epic,
+        direction: sig.direction,
+        size: sized.size,
+        level: res.level || entry,
+        stopLevel: round(sig.stop, dp),
+        profitLevel: round(target, dp),
+        upl: 0,
+        createdAt: new Date(this.now()).toISOString(),
+      });
+      if ("riskAccount" in sized && this.memory) {
+        this.memory.recordOpen(res.dealId, {
+          epic: m.epic,
+          direction: sig.direction,
+          riskAccount: sized.riskAccount,
+          tunable: this.memory.market(m.epic).tunable,
+          openedAt: new Date(this.now()).toISOString(),
+        });
+      }
+      log("buy", `${m.epic} ${long ? "LONG" : "SHORT"} ${sized.size} @ ${fmt(res.level || entry)} · stop ${fmt(sig.stop)} · mål ${fmt(target)} · risiko ca. ${"riskAccount" in sized ? sized.riskAccount.toFixed(2) : "?"} ${acc.currency}${riskAdj.mult < 1 ? ` (halv risiko etter ${riskAdj.reason})` : ""}`, {
         epic: m.epic,
         direction: sig.direction,
         size: sized.size,

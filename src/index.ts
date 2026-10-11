@@ -6,6 +6,9 @@ import { Bot, phaseText } from "./bot.js";
 import { CapitalBroker } from "./broker/capital.js";
 import { loadConfig, orbParams } from "./config.js";
 import { loadHistory, log, recentEvents, tradeStats, useLogFile } from "./core/logger.js";
+import { nyParts } from "./core/time.js";
+import { runLearning } from "./learn/learner.js";
+import { LearningMemory } from "./learn/memory.js";
 import { marketDef } from "./markets.js";
 import { DayGuard } from "./risk.js";
 import { EquityHistory } from "./web/equity.js";
@@ -24,7 +27,31 @@ async function main() {
 
   const markets = cfg.MARKETS.map(marketDef);
   const guard = new DayGuard(cfg.DAILY_LOSS_LIMIT_PCT, cfg.MAX_TRADES_PER_DAY, `data/day-${env}.json`);
-  const bot = new Bot(broker, guard, markets, { riskPerTradePct: cfg.RISK_PER_TRADE_PCT, orb: orbParams(cfg) });
+  const base = orbParams(cfg);
+  const memory = new LearningMemory(`data/learning-${env}.json`, {
+    orbMinutes: base.orbMinutes,
+    rewardRisk: base.rewardRisk,
+    entryCutoffMinutes: base.entryCutoffMinutes,
+    directions: "both",
+  });
+  const bot = new Bot(broker, guard, markets, { riskPerTradePct: cfg.RISK_PER_TRADE_PCT, orb: base }, undefined, memory);
+  let learning = false;
+  /** Læring kjøres utenfor handelstiden (før 08:00 eller etter 16:20 New York-tid, eller i helgen), maks én gang per dag. */
+  const maybeLearn = async () => {
+    if (!cfg.LEARN_ENABLED || learning) return;
+    const ny = nyParts(Date.now());
+    const quiet = ny.weekday === 0 || ny.weekday === 6 || ny.minutes < 8 * 60 || ny.minutes >= 16 * 60 + 20;
+    const stale = !memory.state.lastRun || Date.now() - new Date(memory.state.lastRun).getTime() > 20 * 3600_000;
+    if (!quiet || !stale) return;
+    learning = true;
+    try {
+      await runLearning(broker, markets, memory, base, cfg.LEARN_DAYS);
+    } catch (e) {
+      log("error", `Læringen feilet: ${(e as Error).message}`);
+    } finally {
+      learning = false;
+    }
+  };
   const equity = new EquityHistory(`data/equity-${env}.json`);
   const startedAt = new Date().toISOString();
   let lastTick: string | null = null;
@@ -70,8 +97,18 @@ async function main() {
           ...(v?.signal ? { signal: { direction: v.signal.direction, stop: v.signal.stop, target: v.signal.target } } : {}),
           ...(v?.note ? { note: v.note } : {}),
           tradedToday: guard.state.traded.includes(m.epic),
+          learned: v?.learned ?? "",
+          learnedPaused: v?.learnedPaused ?? false,
+          riskMult: v?.riskMult ?? 1,
         };
       }),
+      learning: {
+        enabled: cfg.LEARN_ENABLED,
+        running: learning,
+        lastRun: memory.state.lastRun,
+        lessons: memory.state.lessons.slice(-20).reverse(),
+        journalTrades: memory.state.journal.length,
+      },
       positions: bot.positions,
       stats: tradeStats(),
       equityHistory: equity.points,
@@ -117,12 +154,14 @@ async function main() {
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
 
+  void maybeLearn();
   let lastSample = 0;
   let lastHeartbeat = 0;
   while (running) {
     try {
       await bot.tick();
       lastTick = new Date().toISOString();
+      void maybeLearn();
       if (Date.now() - lastSample > 60_000) {
         lastSample = Date.now();
         equity.add(bot.equity());

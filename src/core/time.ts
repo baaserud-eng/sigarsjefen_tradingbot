@@ -25,7 +25,20 @@ export interface NyParts {
   weekday: number;
 }
 
+const cache = new Map<number, NyParts>();
+
 export function nyParts(d: Date | number): NyParts {
+  // Samme minutt gir samme svar. Mellomlagring gjør backtest og læring mange ganger raskere.
+  const key = Math.floor(new Date(d).getTime() / 60_000);
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const res = computeNyParts(key * 60_000);
+  if (cache.size > 300_000) cache.clear();
+  cache.set(key, res);
+  return res;
+}
+
+function computeNyParts(d: number): NyParts {
   const parts = Object.fromEntries(nyFmt.formatToParts(new Date(d)).map((p) => [p.type, p.value]));
   return {
     date: `${parts.year}-${parts.month}-${parts.day}`,

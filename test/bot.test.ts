@@ -125,3 +125,43 @@ test("helg: ingenting skjer", async () => {
   assert.equal(broker.opened.length, 0);
   assert.equal(bot.views.get("US100")?.phase, "closed");
 });
+
+test("læringen: marked på pause handles ikke", async () => {
+  const { LearningMemory } = await import("../src/learn/memory.js");
+  const broker = new FakeBroker();
+  broker.candleData = breakout();
+  const mem = new LearningMemory(null, { orbMinutes: 15, rewardRisk: 2, entryCutoffMinutes: 120, directions: "both" });
+  mem.setMarket("US100", { tunable: mem.market("US100").tunable, paused: true, updatedAt: null, reason: "test" });
+  const bot = new Bot(broker, new DayGuard(2, 3, null), [KNOWN_MARKETS.US100!], { riskPerTradePct: 0.5, orb: params }, () => at(20.5), mem);
+  await bot.tick();
+  assert.equal(broker.opened.length, 0);
+});
+
+test("læringen: halv risiko etter tapsrekke, og lærte innstillinger brukes", async () => {
+  const { LearningMemory } = await import("../src/learn/memory.js");
+  const broker = new FakeBroker();
+  broker.candleData = breakout();
+  const tunable = { orbMinutes: 15, rewardRisk: 3, entryCutoffMinutes: 120, directions: "both" as const };
+  const mem = new LearningMemory(null, tunable);
+  for (const r of [-1, -1, -1]) mem.state.journal.push({ at: "", epic: "US100", direction: "BUY", pnl: -50, r, tunable });
+  const bot = new Bot(broker, new DayGuard(2, 3, null), [KNOWN_MARKETS.US100!], { riskPerTradePct: 0.5, orb: params }, () => at(20.5), mem);
+  await bot.tick();
+  assert.equal(broker.opened[0]!.size, 0.05); // halv av 0.1
+  assert.equal(broker.opened[0]!.profitLevel, 20200); // 3R fra læringen
+  assert.ok(mem.state.open["D1"]);
+});
+
+test("lukket handel får resultat fra endringen i saldo", async () => {
+  const { LearningMemory } = await import("../src/learn/memory.js");
+  const broker = new FakeBroker();
+  broker.candleData = breakout();
+  const mem = new LearningMemory(null, { orbMinutes: 15, rewardRisk: 2, entryCutoffMinutes: 120, directions: "both" });
+  const bot = new Bot(broker, new DayGuard(2, 3, null), [KNOWN_MARKETS.US100!], { riskPerTradePct: 0.5, orb: params }, () => at(20.5), mem);
+  await bot.tick();
+  broker.pos = [];
+  broker.balance = 10100;
+  await bot.tick();
+  assert.equal(mem.state.journal.length, 1);
+  assert.equal(mem.state.journal[0]!.pnl, 100);
+  assert.equal(mem.state.journal[0]!.r, 2);
+});

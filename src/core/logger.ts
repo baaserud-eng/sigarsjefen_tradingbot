@@ -10,6 +10,7 @@ export type EventType =
   | "heartbeat"
   | "signal"
   | "info"
+  | "learn"
   | "buy"
   | "sell"
   | "stop"
@@ -50,6 +51,7 @@ const colors: Partial<Record<EventType, string>> = {
   error: "\x1b[31m",
   risk_block: "\x1b[33m",
   control: "\x1b[35m",
+  learn: "\x1b[95m",
 };
 
 function track(ev: BotEvent) {

@@ -12,7 +12,8 @@
     "backtest": "tsx src/cli/backtest.ts",
     "konto": "tsx src/cli/konto.ts",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "learn": "tsx src/cli/learn.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

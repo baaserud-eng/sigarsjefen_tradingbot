@@ -36,6 +36,8 @@ export interface OrbParams {
   minRangePct: number;
   /** Hopp over dager der range er større enn dette i prosent (for bred = stop for langt unna) */
   maxRangePct: number;
+  /** Hvilke retninger som er lov. Læringen kan slå av den retningen som taper. */
+  directions?: "both" | "long" | "short";
 }
 
 export type Direction = "BUY" | "SELL";
@@ -109,11 +111,13 @@ export function evaluateDay(candles: Candle[], market: MarketDef, p: OrbParams, 
     const m = minuteOf(c);
     if (m < orbEnd) continue;
     if (m >= cutoff) break;
-    if (c.c > rangeHigh) {
+    const allowLong = p.directions !== "short";
+    const allowShort = p.directions !== "long";
+    if (c.c > rangeHigh && allowLong) {
       const risk = c.c - rangeLow;
       return { phase: "signal", rangeHigh, rangeLow, signal: { direction: "BUY", ref: c.c, stop: rangeLow, target: c.c + p.rewardRisk * risk, at: c.t } };
     }
-    if (c.c < rangeLow) {
+    if (c.c < rangeLow && allowShort) {
       const risk = rangeHigh - c.c;
       return { phase: "signal", rangeHigh, rangeLow, signal: { direction: "SELL", ref: c.c, stop: rangeHigh, target: c.c - p.rewardRisk * risk, at: c.t } };
     }

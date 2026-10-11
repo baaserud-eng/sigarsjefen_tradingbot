@@ -36,6 +36,9 @@ export interface DashboardMarket {
   signal?: { direction: "BUY" | "SELL"; stop: number; target: number };
   note?: string;
   tradedToday: boolean;
+  learned: string;
+  learnedPaused: boolean;
+  riskMult: number;
 }
 
 export interface DashboardState {
@@ -56,6 +59,13 @@ export interface DashboardState {
     flatBeforeCloseMinutes: number;
   };
   markets: DashboardMarket[];
+  learning: {
+    enabled: boolean;
+    running: boolean;
+    lastRun: string | null;
+    lessons: { at: string; epic: string; decision: string; text: string }[];
+    journalTrades: number;
+  };
   positions: DashboardPosition[];
   stats: TradeStats;
   equityHistory: [string, number][];
