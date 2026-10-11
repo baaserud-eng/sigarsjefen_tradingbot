@@ -8,47 +8,66 @@ import type { BotEvent, TradeStats } from "../core/logger.js";
  *
  * Serveren lytter BARE på denne maskinen (127.0.0.1), så ingen andre på nettet
  * eller i samme Wi-Fi kan åpne den eller trykke på knappene. Den skal aldri
- * legges ut offentlig: den styrer en wallet med ekte penger.
+ * legges ut offentlig: den styrer en konto med ekte penger.
  */
 
 export interface DashboardPosition {
-  mint: string;
-  symbol?: string;
-  sizeSol: number;
-  openedAt: string;
-  valueSol?: number;
-  pnlPct?: number;
+  dealId: string;
+  epic: string;
+  direction: "BUY" | "SELL";
+  size: number;
+  level: number;
+  stopLevel?: number;
+  profitLevel?: number;
+  upl: number;
+  createdAt: string;
+}
+
+export interface DashboardMarket {
+  epic: string;
+  name: string;
+  futures: string;
+  session: string;
+  phase: string;
+  phaseText: string;
+  rangeHigh?: number;
+  rangeLow?: number;
+  last?: number;
+  signal?: { direction: "BUY" | "SELL"; stop: number; target: number };
+  note?: string;
+  tradedToday: boolean;
 }
 
 export interface DashboardState {
-  mode: "dry" | "live";
-  wallet: string | null;
-  balanceSol: number;
+  env: "demo" | "live";
+  currency: string;
+  balance: number;
+  equity: number;
   paused: boolean;
   halted: boolean;
+  day: { pnl: number; lossLimit: number; trades: number; maxTrades: number };
   rules: {
-    maxSolPerTrade: number;
+    riskPerTradePct: number;
     dailyLossLimitPct: number;
-    maxOpenPositions: number;
-    stopLossPct: number;
-    takeProfitPct: number;
-    maxHoldMinutes: number;
-    minSafetyScore: number;
-    minLiquidityUsd: number;
-    maxTop10HolderPct: number;
+    maxTradesPerDay: number;
+    orbMinutes: number;
+    entryCutoffMinutes: number;
+    rewardRisk: number;
+    flatBeforeCloseMinutes: number;
   };
-  day: { realizedPnlSol: number; lossLimitSol: number; startBalanceSol: number };
+  markets: DashboardMarket[];
   positions: DashboardPosition[];
   stats: TradeStats;
-  equity: [string, number][];
+  equityHistory: [string, number][];
   events: BotEvent[];
   startedAt: string;
+  lastTick: string | null;
 }
 
 export interface DashboardActions {
   pause(): void;
   resume(): void;
-  sell(mint: string): Promise<boolean>;
+  close(dealId: string): Promise<boolean>;
 }
 
 const html = readFileSync(fileURLToPath(new URL("./dashboard.html", import.meta.url)), "utf8");
@@ -106,11 +125,11 @@ export function startWebServer(port: number, getState: () => Promise<DashboardSt
           actions.resume();
           return send(res, 200, '{"ok":true}');
         }
-        if (url.pathname === "/api/sell") {
+        if (url.pathname === "/api/close") {
           const body = await readBody(req);
-          const mint = typeof body.mint === "string" ? body.mint : "";
-          if (!mint) return send(res, 400, '{"error":"Mangler mint"}');
-          const ok = await actions.sell(mint);
+          const dealId = typeof body.dealId === "string" ? body.dealId : "";
+          if (!dealId) return send(res, 400, '{"error":"Mangler dealId"}');
+          const ok = await actions.close(dealId);
           return send(res, ok ? 200 : 409, JSON.stringify({ ok }));
         }
       }

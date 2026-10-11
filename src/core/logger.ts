@@ -8,9 +8,8 @@ import { join } from "node:path";
 export type EventType =
   | "start"
   | "heartbeat"
-  | "scan"
-  | "safety"
-  | "rug"
+  | "signal"
+  | "info"
   | "buy"
   | "sell"
   | "stop"
@@ -29,7 +28,7 @@ export interface BotEvent {
 export interface TradeStats {
   trades: number;
   wins: number;
-  realizedSol: number;
+  realized: number;
   best: number;
   worst: number;
 }
@@ -39,29 +38,28 @@ let FILE = join(DATA_DIR, "events.jsonl");
 const KEEP = 400;
 
 const recent: BotEvent[] = [];
-const stats: TradeStats = { trades: 0, wins: 0, realizedSol: 0, best: 0, worst: 0 };
+const stats: TradeStats = { trades: 0, wins: 0, realized: 0, best: 0, worst: 0 };
 let historyLoaded = false;
 
 const colors: Partial<Record<EventType, string>> = {
   buy: "\x1b[32m",
   sell: "\x1b[32m",
   stop: "\x1b[31m",
-  rug: "\x1b[31m",
+  signal: "\x1b[36m",
   halt: "\x1b[31m",
   error: "\x1b[31m",
   risk_block: "\x1b[33m",
-  safety: "\x1b[36m",
   control: "\x1b[35m",
 };
 
 function track(ev: BotEvent) {
   recent.push(ev);
   if (recent.length > KEEP) recent.splice(0, recent.length - KEEP);
-  const pnl = ev.data?.pnlSol;
-  if (typeof pnl === "number" && (ev.type === "sell" || ev.type === "stop" || ev.type === "rug")) {
+  const pnl = ev.data?.pnl;
+  if (typeof pnl === "number" && (ev.type === "sell" || ev.type === "stop")) {
     stats.trades++;
     if (pnl > 0) stats.wins++;
-    stats.realizedSol += pnl;
+    stats.realized += pnl;
     stats.best = Math.max(stats.best, pnl);
     stats.worst = Math.min(stats.worst, pnl);
   }

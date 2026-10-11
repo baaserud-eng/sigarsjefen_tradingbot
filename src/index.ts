@@ -1,19 +1,13 @@
 /**
- * Sigarsjefen: hovedløkke.
- *
- *   skanner (DexScreener) -> sikkerhetssjekk -> risikosjekk -> kjøp via Jupiter
- *   åpne posisjoner sjekkes jevnlig -> salg ved stop-loss, take-profit eller tidsgrense
- *   dashboard på http://localhost:3000
+ * Sigarsjefen: opening range breakout på US100 (NQ), US500 (ES), gull og olje
+ * via Capital.com. Dashboard på http://localhost:3000.
  */
-import { Connection } from "@solana/web3.js";
-import { loadConfig } from "./config.js";
+import { Bot, phaseText } from "./bot.js";
+import { CapitalBroker } from "./broker/capital.js";
+import { loadConfig, orbParams } from "./config.js";
 import { loadHistory, log, recentEvents, tradeStats, useLogFile } from "./core/logger.js";
-import { getBalanceSol, loadWallet } from "./core/wallet.js";
-import { JupiterSwapper } from "./exec/jupiter.js";
-import { RiskManager } from "./risk/riskManager.js";
-import { checkToken } from "./safety/index.js";
-import { DexScreenerScanner } from "./scanner/dexscreener.js";
-import { Trader } from "./trader.js";
+import { marketDef } from "./markets.js";
+import { DayGuard } from "./risk.js";
 import { EquityHistory } from "./web/equity.js";
 import { startWebServer, type DashboardState } from "./web/server.js";
 
@@ -21,109 +15,95 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
   const cfg = loadConfig();
-  const mode = cfg.DRY_RUN ? "dryrun" : "live";
-  useLogFile(`events-${mode}.jsonl`);
+  const env = cfg.CAPITAL_ENV;
+  useLogFile(`events-${env}.jsonl`);
   loadHistory();
 
-  const conn = new Connection(cfg.SOLANA_RPC_URL, "confirmed");
-  const wallet = loadWallet(cfg);
-  const startBalance = await getBalanceSol(conn, cfg, wallet);
+  const broker = new CapitalBroker({ env, apiKey: cfg.CAPITAL_API_KEY, identifier: cfg.CAPITAL_IDENTIFIER, password: cfg.CAPITAL_API_PASSWORD });
+  await broker.login();
+
+  const markets = cfg.MARKETS.map(marketDef);
+  const guard = new DayGuard(cfg.DAILY_LOSS_LIMIT_PCT, cfg.MAX_TRADES_PER_DAY, `data/day-${env}.json`);
+  const bot = new Bot(broker, guard, markets, { riskPerTradePct: cfg.RISK_PER_TRADE_PCT, orb: orbParams(cfg) });
+  const equity = new EquityHistory(`data/equity-${env}.json`);
   const startedAt = new Date().toISOString();
+  let lastTick: string | null = null;
 
-  const risk = new RiskManager(
-    {
-      maxSolPerTrade: cfg.MAX_SOL_PER_TRADE,
-      dailyLossLimitPct: cfg.DAILY_LOSS_LIMIT_PCT,
-      maxOpenPositions: cfg.MAX_OPEN_POSITIONS,
-    },
-    startBalance,
-    `data/state-${mode}.json`,
-  );
-  const trader = new Trader({
-    cfg,
-    risk,
-    swapper: new JupiterSwapper(conn, cfg, wallet),
-    checkSafety: (mint) => checkToken(conn, cfg, mint),
-    walletBalanceSol: () => getBalanceSol(conn, cfg, wallet),
-  });
-  const scanner = new DexScreenerScanner();
-  const equity = new EquityHistory(`data/equity-${mode}.json`);
-
-  // Saldo + verdien av åpne posisjoner. Saldoen caches så dashboardet ikke spør RPC hvert 2. sekund.
-  let lastBalance = await trader.balanceSol();
-  const totalValue = () =>
-    lastBalance +
-    risk.state.openPositions.reduce((s, p) => s + (trader.valuations.get(p.mint)?.valueSol ?? p.sizeSol), 0);
-
-  log("start", `Sigarsjefen starter i ${cfg.DRY_RUN ? "DRY RUN (simulerte handler, ingen ekte penger)" : "LIVE-modus"}`, {
-    dryRun: cfg.DRY_RUN,
-    wallet: wallet?.publicKey.toBase58() ?? null,
-    balanceSol: lastBalance,
-  });
+  const acc = await broker.account();
+  log("start", `Sigarsjefen starter på Capital.com ${env === "live" ? "LIVE (ekte penger)" : "DEMO (lekepenger)"} · saldo ${acc.balance.toFixed(2)} ${acc.currency} · markeder ${cfg.MARKETS.join(", ")}`);
 
   if (cfg.WEB_ENABLED) {
     const getState = async (): Promise<DashboardState> => ({
-      mode: cfg.DRY_RUN ? "dry" : "live",
-      wallet: wallet?.publicKey.toBase58() ?? null,
-      balanceSol: lastBalance,
-      paused: trader.paused,
-      halted: risk.state.halted,
-      rules: {
-        maxSolPerTrade: cfg.MAX_SOL_PER_TRADE,
-        dailyLossLimitPct: cfg.DAILY_LOSS_LIMIT_PCT,
-        maxOpenPositions: cfg.MAX_OPEN_POSITIONS,
-        stopLossPct: cfg.STOP_LOSS_PCT,
-        takeProfitPct: cfg.TAKE_PROFIT_PCT,
-        maxHoldMinutes: cfg.MAX_HOLD_MINUTES,
-        minSafetyScore: cfg.MIN_SAFETY_SCORE,
-        minLiquidityUsd: cfg.MIN_LIQUIDITY_USD,
-        maxTop10HolderPct: cfg.MAX_TOP10_HOLDER_PCT,
-      },
+      env,
+      currency: bot.account?.currency ?? acc.currency,
+      balance: bot.account?.balance ?? acc.balance,
+      equity: bot.account ? bot.equity() : acc.balance,
+      paused: bot.paused,
+      halted: guard.state.halted,
       day: {
-        realizedPnlSol: risk.state.realizedPnlSol,
-        lossLimitSol: risk.lossLimitSol,
-        startBalanceSol: risk.state.dayStartBalanceSol,
+        pnl: bot.account ? guard.dayPnl(bot.equity()) : 0,
+        lossLimit: guard.lossLimit,
+        trades: guard.state.traded.length,
+        maxTrades: cfg.MAX_TRADES_PER_DAY,
       },
-      positions: risk.state.openPositions.map((p) => {
-        const v = trader.valuations.get(p.mint);
+      rules: {
+        riskPerTradePct: cfg.RISK_PER_TRADE_PCT,
+        dailyLossLimitPct: cfg.DAILY_LOSS_LIMIT_PCT,
+        maxTradesPerDay: cfg.MAX_TRADES_PER_DAY,
+        orbMinutes: cfg.ORB_MINUTES,
+        entryCutoffMinutes: cfg.ENTRY_CUTOFF_MINUTES,
+        rewardRisk: cfg.REWARD_RISK,
+        flatBeforeCloseMinutes: cfg.FLAT_BEFORE_CLOSE_MINUTES,
+      },
+      markets: markets.map((m) => {
+        const v = bot.views.get(m.epic);
         return {
-          mint: p.mint,
-          ...(p.symbol ? { symbol: p.symbol } : {}),
-          sizeSol: p.sizeSol,
-          openedAt: p.openedAt,
-          ...(v ? { valueSol: v.valueSol, pnlPct: v.pnlPct } : {}),
+          epic: m.epic,
+          name: m.name,
+          futures: m.futures,
+          session: v?.session ?? "",
+          phase: v?.phase ?? "closed",
+          phaseText: phaseText(v?.phase ?? "closed"),
+          ...(v?.rangeHigh !== undefined ? { rangeHigh: v.rangeHigh } : {}),
+          ...(v?.rangeLow !== undefined ? { rangeLow: v.rangeLow } : {}),
+          ...(v?.last !== undefined ? { last: v.last } : {}),
+          ...(v?.signal ? { signal: { direction: v.signal.direction, stop: v.signal.stop, target: v.signal.target } } : {}),
+          ...(v?.note ? { note: v.note } : {}),
+          tradedToday: guard.state.traded.includes(m.epic),
         };
       }),
+      positions: bot.positions,
       stats: tradeStats(),
-      equity: equity.points,
+      equityHistory: equity.points,
       events: recentEvents(),
       startedAt,
+      lastTick,
     });
     const server = startWebServer(cfg.WEB_PORT, getState, {
       pause: () => {
-        trader.paused = true;
-        log("control", "Kjøp pauset fra dashboardet. Åpne posisjoner passes fortsatt på.");
+        bot.paused = true;
+        log("control", "Nye handler pauset fra dashboardet. Åpne posisjoner beholder stop og mål.");
       },
       resume: () => {
-        trader.paused = false;
-        log("control", "Kjøp startet igjen fra dashboardet.");
+        bot.paused = false;
+        log("control", "Handel startet igjen fra dashboardet.");
       },
-      sell: async (mint) => {
-        log("control", `Manuelt salg bestilt fra dashboardet (${mint.slice(0, 4)}…${mint.slice(-4)})`);
-        const ok = await trader.sellNow(mint);
-        lastBalance = await trader.balanceSol().catch(() => lastBalance);
-        return ok;
+      close: async (dealId) => {
+        log("control", `Manuell lukking bestilt fra dashboardet (${dealId})`);
+        try {
+          return await bot.closeNow(dealId);
+        } catch (e) {
+          log("error", `Lukking feilet: ${(e as Error).message}`);
+          return false;
+        }
       },
     });
     server.on("listening", () => log("start", `Dashboard: http://localhost:${cfg.WEB_PORT}`));
     server.on("error", (e) => log("error", `Dashboardet kunne ikke starte på port ${cfg.WEB_PORT}: ${e.message}. Endre WEB_PORT i .env.`));
   }
 
-  if (!cfg.DRY_RUN) {
-    if (startBalance <= cfg.MIN_SOL_RESERVE + 0.005) {
-      throw new Error(`For lite SOL i bot-walleten (${startBalance.toFixed(4)} SOL). Send SOL til ${wallet!.publicKey.toBase58()} først.`);
-    }
-    log("start", `LIVE-modus: ekte SOL brukes fra ${wallet!.publicKey.toBase58()}. Trykk Ctrl+C innen 10 sekunder for å avbryte.`);
+  if (env === "live") {
+    log("start", "LIVE-modus: ekte penger. Trykk Ctrl+C innen 10 sekunder for å avbryte.");
     await sleep(10_000);
   }
 
@@ -131,53 +111,31 @@ async function main() {
   const stop = () => {
     if (!running) process.exit(0);
     running = false;
-    log("halt", "Stopper Sigarsjefen… (åpne posisjoner blir liggende og sjekkes neste gang boten starter)");
-    setTimeout(() => process.exit(0), 3000);
+    log("halt", "Stopper Sigarsjefen. Åpne posisjoner beholder stop-loss og mål hos Capital.com.");
+    setTimeout(() => process.exit(0), 2000);
   };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
 
-  // Posisjonssjekk i egen løkke, så salg ikke venter på skanning.
-  (async () => {
-    let lastSample = 0;
-    while (running) {
-      try {
-        await trader.checkPositions();
-        lastBalance = await trader.balanceSol();
-        if (Date.now() - lastSample > 15_000) {
-          lastSample = Date.now();
-          equity.add(totalValue());
-        }
-      } catch (e) {
-        log("error", `Posisjonssjekk feilet: ${(e as Error).message}`);
-      }
-      await sleep(cfg.CHECK_POSITIONS_SEC * 1000);
-    }
-  })();
-
+  let lastSample = 0;
   let lastHeartbeat = 0;
   while (running) {
     try {
-      risk.rollDay(totalValue());
-
-      if (!risk.state.halted && !trader.paused) {
-        const candidates = await scanner.scan();
-        if (candidates.length) log("scan", `${candidates.length} nye tokens funnet`);
-        for (const c of candidates) {
-          if (!running || risk.state.halted || trader.paused) break;
-          await trader.consider(c.mint, c.source);
-        }
-        lastBalance = await trader.balanceSol();
+      await bot.tick();
+      lastTick = new Date().toISOString();
+      if (Date.now() - lastSample > 60_000) {
+        lastSample = Date.now();
+        equity.add(bot.equity());
       }
-
-      if (Date.now() - lastHeartbeat > 60_000) {
+      if (Date.now() - lastHeartbeat > 5 * 60_000) {
         lastHeartbeat = Date.now();
-        log("heartbeat", `Saldo ${lastBalance.toFixed(4)} SOL · åpne ${risk.state.openPositions.length} · dagens PnL ${risk.state.realizedPnlSol >= 0 ? "+" : ""}${risk.state.realizedPnlSol.toFixed(4)} SOL${risk.state.halted ? " · STOPPET FOR I DAG" : trader.paused ? " · PAUSET" : ""}`);
+        const a = bot.account!;
+        log("heartbeat", `Konto ${bot.equity().toFixed(2)} ${a.currency} · i dag ${guard.dayPnl(bot.equity()) >= 0 ? "+" : ""}${guard.dayPnl(bot.equity()).toFixed(2)} · åpne ${bot.positions.length}${guard.state.halted ? " · STOPPET FOR I DAG" : bot.paused ? " · PAUSET" : ""}`);
       }
     } catch (e) {
       log("error", (e as Error).message);
     }
-    await sleep(cfg.SCAN_INTERVAL_SEC * 1000);
+    await sleep(cfg.LOOP_SECONDS * 1000);
   }
 }
 

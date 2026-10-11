@@ -19,6 +19,8 @@ if errorlevel 1 goto npmfail
 
 :envfile
 if not exist .env copy .env.example .env >nul
+findstr /r /c:"^CAPITAL_API_KEY=..*" .env >nul
+if errorlevel 1 goto needkeys
 
 echo.
 echo Starter boten. Dashboardet apnes i nettleseren om noen sekunder.
@@ -28,6 +30,20 @@ start "" cmd /c "timeout /t 8 >nul & start http://localhost:3000"
 call npm start
 echo.
 echo Boten har stoppet.
+pause
+exit /b 0
+
+:needkeys
+echo Du ma legge inn Capital.com-innloggingen forst.
+echo.
+echo  1. Lag en gratis DEMOKONTO pa capital.com
+echo  2. Sla pa tofaktor-innlogging (2FA) under Innstillinger
+echo  3. Ga til Innstillinger - API integrations - Generate new key
+echo  4. Fyll inn CAPITAL_API_KEY, CAPITAL_IDENTIFIER og CAPITAL_API_PASSWORD
+echo     i filen som apnes na, og lagre (Ctrl+S)
+echo.
+echo Dobbeltklikk "Start Sigarsjefen" igjen nar du er ferdig.
+start notepad .env
 pause
 exit /b 0
 

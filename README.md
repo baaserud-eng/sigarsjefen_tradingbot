@@ -1,153 +1,103 @@
 # Sigarsjefen
 
-Solana memecoin-bot som skanner nye tokens, sjekker dem for rug-risiko, kopierer de mest lønnsomme traderne og styrer risikoen automatisk.
+Trading-bot som handler **opening range breakout** på US100 (NQ), US500 (ES), gull og olje via Capital.com, med dashboard i nettleseren.
 
-> **Status:** kan handle, og har et dashboard i nettleseren. Boten finner nye tokens på DexScreener, sjekker dem for rug-risiko, kjøper via Jupiter og selger ved stop-loss, take-profit eller tidsgrense. Reddit, X, pump.fun og FOMO-copytrade kommer senere.
+> Start alltid på **demokonto** (lekepenger). Capital.com oppgir selv at rundt 80 % av privatkunder taper penger på CFD-er. Kjør `npm run backtest` og la boten gå på demo en god stund før du vurderer ekte penger.
 
-## Raskeste start (Windows)
+## Strategien
 
-Last ned koden (**Code** → **Download ZIP**), pakk den ut og dobbeltklikk **Start Sigarsjefen.bat**. Den installerer Node.js og pakkene hvis de mangler, starter boten i DRY RUN og åpner dashboardet.
+1. De første **15 minuttene** etter åpning (`ORB_MINUTES`) er *range*: høyeste og laveste pris.
+2. Lukker et helt 5-minutters lys **over** range: kjøp (long). **Under**: selg (short).
+3. **Stop-loss** på motsatt side av range. **Mål** = 2 ganger risikoen (`REWARD_RISK`).
+4. Maks **én handel per marked per dag**, og ingen nye handler senere enn 2 timer etter åpning.
+5. Alt lukkes 15 minutter før sesjonen slutter. Boten holder aldri posisjoner over natten.
 
-## Kom i gang
+Tidene følger New York, så sommertid håndteres automatisk:
 
-Du trenger [Node.js](https://nodejs.org) versjon 20 eller nyere.
+| Marked | Tilsvarer | Åpning (norsk tid) | Stenging |
+|---|---|---|---|
+| US100 | NQ (Nasdaq-100) | 15:30 | 22:00 |
+| US500 | ES (S&P 500) | 15:30 | 22:00 |
+| GOLD | GC (gull) | 14:20 | 19:30 |
+| OIL_CRUDE | CL (olje) | 15:00 | 20:30 |
 
-```bash
-npm install
-npm test
-```
+I noen uker i mars og oktober/november er tidene én time tidligere, fordi USA og Norge bytter til og fra sommertid på forskjellige datoer.
 
-### 1. Lag en bot-wallet
+## Kom i gang (Windows)
 
-```bash
-npm run wallet:new
-```
+1. **Lag en gratis demokonto** på [capital.com](https://capital.com).
+2. Slå på **tofaktor-innlogging (2FA)** under Innstillinger.
+3. Gå til **Innstillinger → API integrations → Generate new key**. Velg et passord for nøkkelen og kopier nøkkelen.
+4. Last ned koden (**Code → Download ZIP**), pakk ut og dobbeltklikk **Start Sigarsjefen**.
+5. Første gang åpnes `.env` i Notisblokk. Fyll inn:
+   - `CAPITAL_API_KEY`: nøkkelen
+   - `CAPITAL_IDENTIFIER`: e-posten din
+   - `CAPITAL_API_PASSWORD`: passordet du valgte for nøkkelen
 
-Dette lager `.env` (hvis den ikke finnes), lager en helt ny wallet og lagrer private key der. Adressen skrives ut. **Ta backup av `.env`**: mister du filen, mister du pengene.
+   Lagre, og dobbeltklikk **Start Sigarsjefen** igjen.
+6. Dashboardet åpnes på **http://localhost:3000**. La det svarte vinduet stå åpent.
 
-### 2. Kjør i DRY RUN først
-
-`.env` har `DRY_RUN=true`. Da gjør boten alt på ekte, bortsett fra å sende transaksjoner: den skanner, sjekker, henter ekte priser fra Jupiter og "kjøper" og "selger" med en simulert saldo.
-
-```bash
-npm start
-```
-
-La den gå noen timer. Hvis den simulerte saldoen går ned, vil den ekte også gjøre det.
-
-### 3. Send SOL til walleten
-
-Send et lite beløp fra Phantom eller en børs til adressen fra steg 1. Sjekk saldoen:
-
-```bash
-npm run wallet
-```
-
-### 4. Test ekte kjøp og salg
+## Kommandoer
 
 ```bash
-npm run swaptest
+npm install        # første gang
+npm run konto      # sjekk innlogging, saldo og markeder
+npm run backtest   # hvordan ville strategien gått de siste 60 dagene?
+npm start          # start boten og dashboardet
+npm test           # kjør testene
 ```
 
-Bytter 0.002 SOL til USDC og tilbake. Koster rundt 0.0005 SOL og viser at transaksjonene går gjennom.
+### Backtest
 
-### 5. Skru på LIVE
+`npm run backtest` henter historiske 5-minutters priser og kjører nøyaktig samme strategi som boten. Resultatet vises i **R**, der 1R er det du risikerer per handel (0,5 % av kontoen som standard).
 
-Sett `DRY_RUN=false` i `.env` og start boten:
+- **Totalt +10R** betyr ca. +5 % av kontoen med standardinnstillingene.
+- **Profit factor over 1**: gevinstene var større enn tapene. **Under 1**: strategien tapte.
+- Testen er bevisst litt pessimistisk: treffes både stop og mål i samme lys, regnes det som tap.
 
-```bash
-npm start
-```
+## Risikostyring
 
-Boten venter 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`. Stopper du boten, blir åpne posisjoner liggende i walleten og sjekkes igjen neste gang den starter.
+- **`RISK_PER_TRADE_PCT`** (0,5): størrelsen regnes ut slik at du taper denne andelen av kontoen hvis stop-loss treffes.
+- **`DAILY_LOSS_LIMIT_PCT`** (2): ingen nye handler resten av dagen når dagens tap når grensen.
+- **`MAX_TRADES_PER_DAY`** (3): maks antall handler per dag.
+- Stop-loss og mål sendes med ordren og ligger **hos Capital.com**. De virker selv om PC-en slås av.
+- Er kontoen for liten for minste handelsstørrelse, hopper boten over handelen i stedet for å risikere for mye.
+- Var boten av da signalet kom, går den ikke inn for sent.
 
 ## Dashboard
 
-Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du:
+På **http://localhost:3000** ser du kontoverdi over tid, dagens resultat, ett kort per marked med range og pris, åpne posisjoner med **Lukk**-knapp, og alle hendelser live. Med **Pause handel** stopper du nye handler. Åpne posisjoner beholder stop og mål.
 
-- saldo over tid, gevinst/tap og treffprosent
-- åpne posisjoner med verdi og PnL, og en **Selg**-knapp for hver
-- skanner-kart over alle tokens boten har sjekket den siste timen
-- alle hendelser live, og hvor mye av dagens tapsgrense som er brukt
-- knapp for å **pause kjøp** (åpne posisjoner passes fortsatt på)
+Dashboardet kan bare åpnes fra PC-en boten kjører på.
 
-Dashboardet kan bare åpnes fra samme PC som boten kjører på. Det skal ikke legges ut på nettet, fordi det styrer en wallet med ekte penger. Port endres med `WEB_PORT` i `.env`.
+## Gå over til ekte penger
 
-### Sjekk en token manuelt
+Når du har sett at strategien fungerer over tid på demo:
 
-```bash
-npm run check <mint-adresse>
-```
-
-## Sikkerhet
-
-- **`DRY_RUN=true` er standard.** Boten later bare som den handler. Sett `DRY_RUN=false` først når du har sett at strategien fungerer.
-- **`.env` skal aldri pushes.** Den inneholder private key til bot-walleten og står i `.gitignore`.
-- **Bruk en egen bot-wallet** med bare det beløpet du er villig til å tape.
-- I LIVE-modus venter boten 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`.
-
-## Slik vurderes en token
-
-Hver token starter på 100 poeng og får trekk for funn. Kritiske funn gir alltid avslag.
-
-| Sjekk | Trekk | Type |
-|---|---|---|
-| Mint authority er på | 40 | Kritisk |
-| Freeze authority er på | 40 | Kritisk |
-| Farlige Token-2022-utvidelser (permanent delegate, transfer hook, m.fl.) | 40 | Kritisk |
-| Ingen pool med likviditet | 40 | Kritisk |
-| Topp-10 holdere over grensen (over 1,5x grensen) | 20 (35) | Advarsel |
-| Likviditet under grensen (under halve grensen) | 20 (35) | Advarsel |
-| Pool yngre enn 10 minutter | 5 | Info |
-
-Pooler, bonding curves og andre program-eide kontoer telles ikke som holdere.
-
-## Risikoregler
-
-Styres fra `.env`:
-
-- **`MAX_SOL_PER_TRADE`**: maks innsats per handel
-- **`DAILY_LOSS_LIMIT_PCT`**: boten stopper alle nye kjøp resten av dagen (UTC) når tapet når denne grensen. Én handel er aldri større enn det som er igjen av grensen. Med 1 SOL og 5 % blir hver handel derfor maks 0.05 SOL.
-- **`MAX_OPEN_POSITIONS`**: maks antall åpne posisjoner samtidig
-- **`STOP_LOSS_PCT`** og **`TAKE_PROFIT_PCT`**: selg ved så mye tap eller gevinst. Memecoins kan falle mer enn stop-loss mellom to sjekker, så et tap kan bli større.
-- **`MAX_HOLD_MINUTES`**: selg uansett etter så mange minutter
-- **`MIN_SOL_RESERVE`**: SOL som alltid blir igjen til gebyrer
-
-En token som ikke lenger har noen pris (typisk etter en rug) regnes som tapt etter 6 forsøk på rad.
-
-Tilstanden lagres i `data/state-live.json` (og `data/state-dryrun.json` for simulering), så en omstart nullstiller ikke dagstapet.
+1. Lag en API-nøkkel på din **ekte** Capital.com-konto.
+2. Sett `CAPITAL_ENV=live` og de nye nøkkelverdiene i `.env`.
+3. Start boten. Den venter 10 sekunder før den begynner, så du rekker å avbryte.
 
 ## Struktur
 
 ```
 src/
-├── index.ts            hovedløkke: skann -> sjekk -> kjøp, og sjekk posisjoner -> selg
-├── trader.ts           kjøps- og salgslogikk
-├── config.ts           leser og validerer .env
-├── scanner/
-│   └── dexscreener.ts  nye og boostede Solana-tokens
-├── exec/
-│   └── jupiter.ts      kjøp og salg via Jupiter
-├── web/
-│   ├── server.ts       dashboard-server (bare localhost)
-│   ├── dashboard.html  selve nettsiden
-│   └── equity.ts       saldo over tid
+├── index.ts             starter boten og dashboardet
+├── bot.ts               én runde: konto, signaler, ordre, lukking ved sesjonsslutt
+├── markets.ts           markeder og åpningstider
+├── risk.ts              posisjonsstørrelse og dagstap-grense
+├── config.ts            leser og sjekker .env
+├── strategy/
+│   ├── orb.ts           opening range breakout (ren logikk)
+│   └── backtest.ts      simulering på historiske priser
+├── broker/
+│   ├── types.ts         hva boten trenger fra en megler
+│   └── capital.ts       Capital.com-API
 ├── core/
-│   ├── logger.ts       logger alle hendelser til data/events-*.jsonl
-│   └── wallet.ts       bot-wallet og saldo
-├── safety/
-│   ├── fetchFacts.ts   henter token-data fra Solana RPC og DexScreener
-│   └── score.ts        poengregler
-├── risk/
-│   └── riskManager.ts  risikostyring og dagstap-grense
+│   ├── logger.ts        hendelseslogg (data/events-*.jsonl)
+│   └── time.ts          New York-tid og sommertid
+├── web/                 dashboardet
 └── cli/
-    ├── check.ts        npm run check <mint>
-    ├── wallet.ts       npm run wallet / wallet:new
-    └── swapTest.ts     npm run swaptest
+    ├── backtest.ts      npm run backtest
+    └── konto.ts         npm run konto
 ```
-
-## Neste steg
-
-1. **Flere kilder:** pump.fun, Reddit og X
-2. **Copytrade:** følge topp-wallets fra FOMO
-3. **Varsler:** Telegram-melding ved kjøp, salg og stopp
