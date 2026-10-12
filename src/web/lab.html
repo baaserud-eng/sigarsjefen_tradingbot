@@ -1,0 +1,1347 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sigarsjefen Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three.module.min.js",
+  "three/addons/": "/vendor/addons/"
+} }
+</script>
+<style>
+/* Fullskjerms 3D-lab med et tynt glass-lag av paneler i hjørnene. Bevisst mørkt, ett tema. */
+:root{
+  color-scheme:dark;
+  --bg:#07050d; --glass:rgba(16,11,26,.72); --glass-hi:rgba(24,16,38,.86); --line:rgba(140,110,200,.22); --line-hi:rgba(190,150,255,.45);
+  --fg:#efe9f8; --dim:#9a8fb0; --faint:#61577a;
+  --accent:#ff3d9a; --up:#2fe0a0; --down:#ff4d5e; --warn:#ffb347; --cyan:#22d3ee;
+  --display:"Chakra Petch","Arial Narrow",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);overflow:hidden}
+body{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+#labels{position:fixed;inset:0;pointer-events:none}
+
+/* Paneler */
+.panel{position:fixed;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:10px 12px}
+.ph{color:var(--dim);font-size:10px;letter-spacing:.14em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ph b{color:var(--fg);font-weight:500}
+#top{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 12px}
+.brand{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.brand b{color:var(--accent)}
+.pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid currentColor;white-space:nowrap}
+.pill.demo{color:var(--warn)}.pill.dry{color:var(--cyan)}.pill.live{color:var(--up)}
+.kv{color:var(--dim);font-size:11px}
+.kv span{color:var(--fg);margin-left:5px}
+.grow{flex:1}
+.clock{font-family:var(--display);font-size:15px}
+
+#stats{top:72px;left:12px;width:236px}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.stat i{display:block;font-style:normal;color:var(--faint);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.stat b{font-family:var(--display);font-size:22px;font-weight:700;line-height:1.1}
+.pnl{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.pnl b{font-family:var(--display);font-size:26px}
+.pnl small{color:var(--dim);font-size:11px;display:block;margin-top:2px}
+.pnl .tag{color:var(--warn);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-top:6px;display:block}
+.up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.muted{color:var(--faint)}
+.perf{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:5px}
+.bar{display:grid;grid-template-columns:76px 1fr 38px;gap:8px;align-items:center;color:var(--dim);font-size:10px}
+.bar .tr{height:4px;background:rgba(255,255,255,.08);position:relative}
+.bar .tr i{position:absolute;inset:0 auto 0 0;background:var(--cyan)}
+.bar em{font-style:normal;color:var(--fg);text-align:right}
+
+#feed{right:12px;top:72px;width:330px;max-height:calc(100% - 160px);display:flex;flex-direction:column}
+#feedlist{overflow:auto;display:flex;flex-direction:column;gap:3px;min-height:0}
+#feedlist div{display:grid;grid-template-columns:44px 1fr;gap:8px;font-size:11px;line-height:1.35}
+#feedlist time{color:var(--faint)}
+#feedlist span{color:var(--dim);overflow-wrap:anywhere}
+#feedlist span b{font-weight:500}
+
+#controls{left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:calc(100% - 24px)}
+.btn{background:rgba(255,255,255,.03);border:1px solid var(--line-hi);padding:6px 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.on{border-color:var(--cyan);color:var(--cyan)}
+.btn.hot{border-color:var(--accent);color:var(--accent)}
+.sep{width:1px;height:22px;background:var(--line)}
+select{background:#120c1d;border:1px solid var(--line-hi);padding:5px 6px;font-size:11px}
+#speed{min-width:34px;text-align:center;color:var(--fg)}
+a.btn{text-decoration:none;color:var(--fg)}
+
+#inspect{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:280px}
+#inspect[hidden]{display:none}
+.ins-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ins-dot{width:12px;height:12px;border-radius:50%;box-shadow:0 0 10px currentColor;background:currentColor}
+.ins-name{font-family:var(--display);font-size:18px;font-weight:700}
+.ins-role{color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.rows{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:11px}
+.rows dt{color:var(--faint)}.rows dd{margin:0;text-align:right}
+.ins-actions{display:flex;gap:6px;margin-top:10px}
+
+/* Etiketter i 3D-verdenen */
+.tag3d{font-family:var(--mono);font-size:10px;line-height:1.2;padding:3px 6px;background:rgba(10,6,18,.78);border:1px solid var(--c,#888);color:#efe9f8;white-space:nowrap;transform:translateY(-6px);box-shadow:0 0 10px color-mix(in srgb,var(--c) 40%,transparent)}
+.tag3d b{color:var(--c);font-weight:600}
+.tag3d .prog{height:2px;background:rgba(255,255,255,.12);margin-top:3px}
+.tag3d .prog i{display:block;height:100%;background:var(--c)}
+.tag3d.sel{outline:1px solid #fff}
+.tag3d.quiet{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;background:var(--c);border:0;box-shadow:0 0 8px var(--c)}
+.tag3d.quiet *{display:none}
+.room3d{font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--c);text-shadow:0 0 12px var(--c);opacity:.9;white-space:nowrap}
+.room3d small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:#9a8fb0;text-shadow:none;font-weight:400;text-align:center}
+.note3d{font-family:var(--display);font-size:12px;font-weight:700;padding:4px 9px;border:1px solid var(--c);background:rgba(10,6,18,.85);color:var(--c);white-space:nowrap;box-shadow:0 0 16px color-mix(in srgb,var(--c) 50%,transparent)}
+.hide-labels .tag3d,.hide-labels .room3d{display:none}
+
+#fallback{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
+#fallback.show{display:flex}
+#fallback div{max-width:420px;line-height:1.6;color:var(--dim)}
+#fallback h2{font-family:var(--display);color:var(--fg)}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);pointer-events:none;transition:opacity .6s}
+
+@media (max-width:820px){
+  #feed{display:none}
+  #stats{width:auto;right:12px;top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));padding:8px 10px}
+  .statgrid{grid-template-columns:repeat(4,1fr);gap:6px}
+  .stat b{font-size:16px}
+  .perf{display:none}
+  .pnl{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px}
+  .pnl b{font-size:18px}
+  #inspect{left:12px;right:12px;width:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+  #top .kv{display:none}
+  #controls{gap:4px}
+  .btn{padding:6px 8px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="stage" aria-label="3D-lab der agentene til Sigarsjefen jobber"></div>
+<div id="labels"></div>
+<div id="loading">Starter laben…</div>
+
+<header id="top" class="panel">
+  <div class="brand">Sigar<b>sjefen</b> // lab</div>
+  <span class="pill demo" id="mode">Demo-data</span>
+  <div class="kv" id="botstatus">Kobler til boten…</div>
+  <div class="kv">Saldo<span id="bal">–</span></div>
+  <div class="grow"></div>
+  <div class="clock" id="clock">--:--:--</div>
+</header>
+
+<section id="stats" class="panel" aria-label="Status">
+  <div class="ph">Laben <b id="simstate">Kjører</b></div>
+  <div class="statgrid">
+    <div class="stat"><i>Agenter</i><b id="s-agents">0</b></div>
+    <div class="stat"><i>Jobber nå</i><b id="s-working">0</b></div>
+    <div class="stat"><i>Fullført</i><b id="s-done">0</b></div>
+    <div class="stat"><i>Pågår</i><b id="s-queue">0</b></div>
+  </div>
+  <div class="pnl">
+    <i class="muted" style="font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Resultat</i>
+    <b id="pnl">+0.0000</b>
+    <small id="pnlday">I dag +0.0000 SOL · 0 handler</small>
+    <span class="tag" id="pnltag">Demo-data, ikke ekte penger</span>
+  </div>
+  <div class="perf" aria-label="Systemytelse">
+    <div class="bar">FPS<div class="tr"><i id="p-fps" style="width:0"></i></div><em id="p-fpsv">–</em></div>
+    <div class="bar">Belastning<div class="tr"><i id="p-load" style="width:0"></i></div><em id="p-loadv">–</em></div>
+    <div class="bar">Batteri snitt<div class="tr"><i id="p-bat" style="width:0;background:var(--up)"></i></div><em id="p-batv">–</em></div>
+  </div>
+</section>
+
+<section id="feed" class="panel" aria-label="Aktivitet">
+  <div class="ph">Aktivitet <b>live</b></div>
+  <div id="feedlist" aria-live="polite"></div>
+</section>
+
+<nav id="controls" class="panel" aria-label="Kontroller">
+  <button class="btn" id="b-pause" type="button">Pause</button>
+  <button class="btn" id="b-slow" type="button" aria-label="Saktere">−</button>
+  <span id="speed">1x</span>
+  <button class="btn" id="b-fast" type="button" aria-label="Raskere">+</button>
+  <span class="sep"></span>
+  <select id="role-sel" aria-label="Type agent"></select>
+  <button class="btn" id="b-spawn" type="button">Ny agent</button>
+  <span class="sep"></span>
+  <button class="btn on" id="b-labels" type="button">Etiketter</button>
+  <button class="btn on" id="b-fx" type="button">Effekter</button>
+  <button class="btn" id="b-reset" type="button">Nullstill</button>
+  <span class="sep"></span>
+  <button class="btn" id="b-botpause" type="button" hidden>Pause kjøp</button>
+  <a class="btn" id="b-classic" href="/klassisk">Klassisk visning</a>
+</nav>
+
+<aside id="inspect" class="panel" hidden aria-label="Valgt agent">
+  <div class="ins-h"><span class="ins-dot" id="i-dot"></span><div><div class="ins-name" id="i-name">–</div><div class="ins-role" id="i-role">–</div></div></div>
+  <dl class="rows">
+    <dt>Status</dt><dd id="i-state">–</dd>
+    <dt>Oppgave</dt><dd id="i-task">–</dd>
+    <dt>Batteri</dt><dd id="i-bat">–</dd>
+    <dt>Fullført</dt><dd id="i-done">–</dd>
+    <dt>Fart</dt><dd id="i-speed">–</dd>
+  </dl>
+  <div class="ins-actions">
+    <button class="btn" id="i-follow" type="button">Følg med kamera</button>
+    <button class="btn" id="i-close" type="button">Lukk</button>
+  </div>
+</aside>
+
+<div id="fallback"><div><h2>3D er ikke tilgjengelig</h2><p>Nettleseren eller grafikkortet ditt støtter ikke WebGL, så laben kan ikke vises. Boten kjører som vanlig.</p><p><a class="btn" href="/klassisk">Åpne klassisk visning</a></p></div></div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+/* =========================================================================
+   1. Roller og rom
+   ========================================================================= */
+const ROLES = {
+  research:      { name: "Skanner",        desc: "Finner nye tokens",            color: "#a855f7", room: 0, speed: [1.5, 1.9] },
+  strategy:      { name: "Risiko",         desc: "Sikkerhetssjekker tokens",     color: "#22d3ee", room: 1, speed: [1.2, 1.5] },
+  trading:       { name: "Trader",         desc: "Kjøper og selger",             color: "#ff3d9a", room: 2, speed: [1.6, 2.0] },
+  optimization:  { name: "Vakt",           desc: "Passer på stop-loss og mål",   color: "#34d399", room: 2, speed: [1.3, 1.6] },
+  coding:        { name: "Koder",          desc: "Holder systemet i gang",       color: "#60a5fa", room: 3, speed: [1.1, 1.4] },
+  communication: { name: "Budbringer",     desc: "Frakter beskjeder mellom rom", color: "#fbbf24", room: 5, speed: [2.1, 2.6] },
+};
+const ROLE_KEYS = Object.keys(ROLES);
+const NAMES = ["Bit","Nova","Pixel","Zed","Echo","Juno","Rex","Kilo","Mira","Orbit","Flux","Tess","Vex","Lumo","Neon","Byte","Kai","Ivy","Dash","Sol","Arc","Zip","Rho","Quill","Fenn","Ola","Siri","Taco","Yuki","Bolt"];
+const STATE_TEXT = { idle: "Ser seg rundt", walking: "Går", working: "Jobber", communicating: "Snakker", celebrating: "Feirer", sad: "Lei seg", waiting: "Venter", charging: "Lader" };
+
+const W = 35, H = 23;
+const ROOMS = [
+  { name: "Skanner",   sub: "finner nye tokens",      x0: 0,  x1: 10, z0: 0,  z1: 10, color: "#a855f7" },
+  { name: "Risiko",    sub: "sikkerhetssjekk",         x0: 12, x1: 22, z0: 0,  z1: 10, color: "#22d3ee" },
+  { name: "Trading",   sub: "kjøp, salg og vakthold",  x0: 24, x1: 34, z0: 0,  z1: 10, color: "#ff3d9a" },
+  { name: "Kodelab",   sub: "drift og vedlikehold",    x0: 0,  x1: 10, z0: 12, z1: 22, color: "#60a5fa" },
+  { name: "Kommando",  sub: "portal og møteplass",     x0: 12, x1: 22, z0: 12, z1: 22, color: "#2dd4bf" },
+  { name: "Lading",    sub: "lading og post",          x0: 24, x1: 34, z0: 12, z1: 22, color: "#818cf8" },
+];
+
+/* =========================================================================
+   2. Kart og stifinning (A* på rutenett)
+   ========================================================================= */
+const blocked = new Uint8Array(W * H);
+const idx = (x, z) => z * W + x;
+const inB = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
+const free = (x, z) => inB(x, z) && !blocked[idx(x, z)];
+const cw = (cx, cz) => new THREE.Vector3(cx - W / 2 + 0.5, 0, cz - H / 2 + 0.5);
+const cellOf = (x, z) => [Math.floor(x + W / 2), Math.floor(z + H / 2)];
+const walkableAt = (x, z) => { const [cx, cz] = cellOf(x, z); return free(cx, cz); };
+
+// Vegger med døråpninger
+for (let z = 0; z < H; z++) for (const x of [11, 23]) if (!((z >= 4 && z <= 6) || (z >= 16 && z <= 18))) blocked[idx(x, z)] = 1;
+for (let x = 0; x < W; x++) if (!((x >= 4 && x <= 6) || (x >= 16 && x <= 18) || (x >= 28 && x <= 30))) blocked[idx(x, 11)] = 1;
+
+function astar(sx, sz, tx, tz) {
+  if (!free(tx, tz)) return null;
+  const n = W * H, g = new Float32Array(n).fill(Infinity), f = new Float32Array(n).fill(Infinity), from = new Int32Array(n).fill(-1), closed = new Uint8Array(n);
+  const open = [idx(sx, sz)];
+  g[open[0]] = 0;
+  const h = (x, z) => { const dx = Math.abs(x - tx), dz = Math.abs(z - tz); return dx + dz + (Math.SQRT2 - 2) * Math.min(dx, dz); };
+  f[open[0]] = h(sx, sz);
+  const goal = idx(tx, tz);
+  while (open.length) {
+    let bi = 0;
+    for (let i = 1; i < open.length; i++) if (f[open[i]] < f[open[bi]]) bi = i;
+    const cur = open.splice(bi, 1)[0];
+    if (cur === goal) break;
+    closed[cur] = 1;
+    const cx = cur % W, cz = (cur / W) | 0;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dz) continue;
+      const nx = cx + dx, nz = cz + dz;
+      if (!free(nx, nz)) continue;
+      if (dx && dz && (!free(cx + dx, cz) || !free(cx, cz + dz))) continue; // ingen hjørneskjæring
+      const ni = idx(nx, nz);
+      if (closed[ni]) continue;
+      const ng = g[cur] + (dx && dz ? Math.SQRT2 : 1);
+      if (ng < g[ni]) { g[ni] = ng; f[ni] = ng + h(nx, nz); from[ni] = cur; if (!open.includes(ni)) open.push(ni); }
+    }
+  }
+  if (from[goal] === -1 && goal !== idx(sx, sz)) return null;
+  const cells = [];
+  for (let c = goal; c !== -1; c = from[c]) cells.unshift([c % W, (c / W) | 0]);
+  return cells;
+}
+
+function lineClear(a, b) {
+  const d = a.distanceTo(b), steps = Math.ceil(d / 0.2);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps, x = a.x + (b.x - a.x) * t, z = a.z + (b.z - a.z) * t;
+    for (const [ox, oz] of [[0, 0], [0.22, 0], [-0.22, 0], [0, 0.22], [0, -0.22]]) if (!walkableAt(x + ox, z + oz)) return false;
+  }
+  return true;
+}
+
+function findPath(from, cell) {
+  const [sx, sz] = cellOf(from.x, from.z);
+  const cells = astar(sx, sz, cell[0], cell[1]);
+  if (!cells) return null;
+  const pts = cells.map(([x, z]) => cw(x, z));
+  pts[0] = from.clone();
+  // Glatt ut: hopp over punkter vi ser rett til
+  const out = [pts[0]];
+  let i = 0;
+  while (i < pts.length - 1) {
+    let j = pts.length - 1;
+    while (j > i + 1 && !lineClear(pts[i], pts[j])) j--;
+    out.push(pts[j]);
+    i = j;
+  }
+  return out.slice(1);
+}
+
+/* =========================================================================
+   3. Scene
+   ========================================================================= */
+const stage = document.getElementById("stage");
+const isMobile = matchMedia("(max-width: 820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const testCanvas = document.createElement("canvas");
+const hasGL = !!(testCanvas.getContext("webgl2") || testCanvas.getContext("webgl"));
+
+let renderer, scene, camera, controls, composer, bloom, labelRenderer;
+const clock = new THREE.Clock();
+const fx = { on: !isMobile, labels: true };
+
+if (!hasGL) {
+  document.getElementById("fallback").classList.add("show");
+  document.getElementById("loading").style.opacity = 0;
+} else {
+  renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  stage.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color("#07050d");
+  scene.fog = new THREE.Fog("#07050d", 38, 70);
+
+  camera = new THREE.PerspectiveCamera(isMobile ? 52 : 40, innerWidth / innerHeight, 0.1, 200);
+  camera.position.set(-6, isMobile ? 34 : 26, 30);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0, 0);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 8;
+  controls.maxDistance = 60;
+  controls.maxPolarAngle = Math.PI * 0.44;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.25;
+  renderer.domElement.addEventListener("pointerdown", () => (controls.autoRotate = false));
+
+  labelRenderer = new CSS2DRenderer({ element: document.getElementById("labels") });
+  labelRenderer.setSize(innerWidth, innerHeight);
+
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.45, 0.32);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+
+  scene.add(new THREE.HemisphereLight("#6c5a9e", "#0a0612", 0.9));
+  const key = new THREE.DirectionalLight("#c9b8ff", 0.9);
+  key.position.set(-10, 25, 12);
+  scene.add(key);
+
+  addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    composer.setSize(innerWidth, innerHeight);
+    labelRenderer.setSize(innerWidth, innerHeight);
+  });
+}
+
+/* =========================================================================
+   4. Miljø: gulv, vegger, stasjoner, hologrammer
+   ========================================================================= */
+const animated = []; // funksjoner (t, dt) som kjøres hver frame
+const stations = [];  // { room, kind, spot:[x,z], face:Vector3, occupant }
+const screens = [];   // canvas-skjermer som tegnes på nytt jevnlig
+
+function gridTexture(color) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const x = c.getContext("2d");
+  x.fillStyle = "#0c0816"; x.fillRect(0, 0, 128, 128);
+  x.strokeStyle = color; x.globalAlpha = 0.5; x.lineWidth = 2; x.strokeRect(1, 1, 126, 126);
+  x.globalAlpha = 0.12; x.fillStyle = color; x.fillRect(4, 4, 120, 120);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function makeScreen(kind, color, w = 256, h = 160) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = { kind, color, ctx, tex, w, h, off: Math.random() * 100 };
+  screens.push(s);
+  drawScreen(s, 0);
+  return tex;
+}
+
+const marketLine = []; // brukes av trading-skjermene (ekte saldo når boten er koblet til)
+function drawScreen(s, t) {
+  const { ctx, w, h, color } = s;
+  ctx.fillStyle = "#06030c"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+  if (s.kind === "code") {
+    ctx.globalAlpha = 0.85; ctx.font = "11px monospace";
+    const off = Math.floor(t * 3 + s.off);
+    for (let i = 0; i < 11; i++) {
+      const n = (off + i) * 7919 % 97;
+      ctx.globalAlpha = 0.35 + (n % 5) / 8;
+      ctx.fillRect(10 + (n % 4) * 14, 10 + i * 13, 30 + (n * 13) % (w - 70), 6);
+    }
+  } else if (s.kind === "chart") {
+    const pts = marketLine.length > 3 ? marketLine.slice(-60) : Array.from({ length: 60 }, (_, i) => 50 + Math.sin(i / 5 + t + s.off) * 18 + Math.sin(i / 2.3 + s.off) * 6);
+    const mn = Math.min(...pts), mx = Math.max(...pts), rg = mx - mn || 1;
+    ctx.globalAlpha = 0.25;
+    for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(0, (h * i) / 4); ctx.lineTo(w, (h * i) / 4); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.beginPath();
+    pts.forEach((v, i) => { const X = (i / (pts.length - 1)) * (w - 16) + 8, Y = h - 12 - ((v - mn) / rg) * (h - 24); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+    ctx.stroke();
+  } else if (s.kind === "radar") {
+    const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 8;
+    ctx.globalAlpha = 0.35;
+    for (let i = 1; i <= 3; i++) { ctx.beginPath(); ctx.arc(cx, cy, (r * i) / 3, 0, 7); ctx.stroke(); }
+    const a = t * 1.6 + s.off;
+    ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); ctx.stroke();
+    for (let i = 0; i < 6; i++) { const b = (i * 2.1 + s.off) % 6.28, d = r * (0.3 + ((i * 37) % 60) / 100); ctx.globalAlpha = 0.4 + 0.6 * Math.max(0, Math.cos(a - b)); ctx.beginPath(); ctx.arc(cx + Math.cos(b) * d, cy + Math.sin(b) * d, 3, 0, 7); ctx.fill(); }
+  } else {
+    // "bars": sikkerhetsscorer
+    ctx.globalAlpha = 0.9;
+    for (let i = 0; i < 8; i++) { const v = 0.3 + 0.6 * Math.abs(Math.sin(t * 0.7 + i * 1.3 + s.off)); ctx.globalAlpha = v > 0.7 ? 1 : 0.4; ctx.fillRect(12 + i * ((w - 24) / 8), h - 10 - v * (h - 30), (w - 24) / 8 - 6, v * (h - 30)); }
+  }
+  ctx.globalAlpha = 1;
+  s.tex.needsUpdate = true;
+}
+
+const M = {}; // delte materialer
+function emissive(color, intensity = 1.6) {
+  return new THREE.MeshStandardMaterial({ color: "#000", emissive: color, emissiveIntensity: intensity });
+}
+
+function buildWorld() {
+  M.wall = new THREE.MeshStandardMaterial({ color: "#1a1330", roughness: 0.7, metalness: 0.3 });
+  M.desk = new THREE.MeshStandardMaterial({ color: "#231a3d", roughness: 0.5, metalness: 0.5 });
+  M.dark = new THREE.MeshStandardMaterial({ color: "#120c20", roughness: 0.6, metalness: 0.4 });
+
+  // Gulv per rom
+  for (const r of ROOMS) {
+    const w = r.x1 - r.x0 + 1, d = r.z1 - r.z0 + 1;
+    const tex = gridTexture(r.color);
+    tex.repeat.set(w, d);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: "#ffffff", emissiveIntensity: 0.16, roughness: 0.4, metalness: 0.4 }));
+    floor.rotation.x = -Math.PI / 2;
+    const c = cw(r.x0 + w / 2 - 0.5, r.z0 + d / 2 - 0.5);
+    floor.position.set(c.x, 0, c.z);
+    scene.add(floor);
+    // Rom-lys
+    const light = new THREE.PointLight(r.color, 11, 16, 1.6);
+    light.position.set(c.x, 4.5, c.z);
+    scene.add(light);
+    // Rom-navn
+    const el = document.createElement("div");
+    el.className = "room3d"; el.style.setProperty("--c", r.color);
+    el.innerHTML = `${r.name}<small>${r.sub}</small>`;
+    const lab = new CSS2DObject(el);
+    lab.position.set(c.x, 3.2, c.z - d / 2 + 0.6);
+    scene.add(lab);
+  }
+  // Mørk plate under alt
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(W + 6, H + 6), M.dark);
+  base.rotation.x = -Math.PI / 2; base.position.y = -0.02; scene.add(base);
+
+  // Vegger (inkl. yttervegger) som blokker med lysende topp
+  const wallGeo = new THREE.BoxGeometry(1, 1.4, 1);
+  const stripGeo = new THREE.BoxGeometry(1.02, 0.05, 1.02);
+  const stripMat = emissive("#8b5cf6", 1.2);
+  const wallCells = [];
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (blocked[idx(x, z)]) wallCells.push([x, z]);
+  for (let x = -1; x <= W; x++) { wallCells.push([x, -1]); wallCells.push([x, H]); }
+  for (let z = 0; z < H; z++) { wallCells.push([-1, z]); wallCells.push([W, z]); }
+  const walls = new THREE.InstancedMesh(wallGeo, M.wall, wallCells.length);
+  const strips = new THREE.InstancedMesh(stripGeo, stripMat, wallCells.length);
+  const m4 = new THREE.Matrix4();
+  wallCells.forEach(([x, z], i) => {
+    const p = cw(x, z);
+    m4.makeTranslation(p.x, 0.7, p.z); walls.setMatrixAt(i, m4);
+    m4.makeTranslation(p.x, 1.42, p.z); strips.setMatrixAt(i, m4);
+  });
+  scene.add(walls, strips);
+
+  // Dørrammer som gløder
+  const doorMat = emissive("#22d3ee", 2.2);
+  const doors = [[11, 5, "z"], [11, 17, "z"], [23, 5, "z"], [23, 17, "z"], [5, 11, "x"], [17, 11, "x"], [29, 11, "x"]];
+  for (const [x, z, axis] of doors) {
+    const p = cw(x, z);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(axis === "x" ? 3 : 0.12, 0.08, axis === "x" ? 0.12 : 3), doorMat);
+    bar.position.set(p.x, 1.9, p.z);
+    scene.add(bar);
+  }
+
+  // --- Stasjoner ---
+  const R = (i) => ROOMS[i];
+  const block = (x, z) => (blocked[idx(x, z)] = 1);
+  const deskGeo = new THREE.BoxGeometry(0.9, 0.5, 0.6);
+  const monGeo = new THREE.PlaneGeometry(0.8, 0.5);
+
+  function desk(roomI, x, z, kind, screenKind, faceDir = 1) {
+    block(x, z);
+    const p = cw(x, z), r = R(roomI);
+    const g = new THREE.Group();
+    const d = new THREE.Mesh(deskGeo, M.desk); d.position.y = 0.25; g.add(d);
+    const mon = new THREE.Mesh(monGeo, new THREE.MeshBasicMaterial({ map: makeScreen(screenKind, r.color), toneMapped: false }));
+    mon.position.set(0, 0.85, -0.1 * faceDir); mon.rotation.y = faceDir > 0 ? 0 : Math.PI; g.add(mon);
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.03, 0.62), emissive(r.color, 1.4)); edge.position.y = 0.51; g.add(edge);
+    g.position.copy(p); scene.add(g);
+    const spot = [x, z + faceDir];
+    stations.push({ room: roomI, kind, spot, look: p.clone(), occupant: null });
+  }
+
+  function terminal(roomI, x, z, kind, screenKind, spots) {
+    block(x, z);
+    const p = cw(x, z), r = R(roomI);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 1.1, 8), M.desk); col.position.set(p.x, 0.55, p.z); scene.add(col);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.7), new THREE.MeshBasicMaterial({ map: makeScreen(screenKind, r.color), toneMapped: false, side: THREE.DoubleSide, transparent: true, opacity: 0.92 }));
+    scr.position.set(p.x, 1.55, p.z); scene.add(scr);
+    animated.push((t) => { scr.position.y = 1.55 + Math.sin(t * 1.5 + x) * 0.05; scr.lookAt(camera.position.x, scr.position.y, camera.position.z); });
+    for (const s of spots) stations.push({ room: roomI, kind, spot: s, look: p.clone(), occupant: null });
+  }
+
+  function holoTable(roomI, x, z, kind, shape, spots) {
+    block(x, z);
+    const p = cw(x, z), r = R(roomI);
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.42, 0.55, 16), M.desk); t.position.set(p.x, 0.27, p.z); scene.add(t);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.025, 8, 32), emissive(r.color, 2)); ring.rotation.x = Math.PI / 2; ring.position.set(p.x, 0.56, p.z); scene.add(ring);
+    const geo = shape === "globe" ? new THREE.IcosahedronGeometry(0.42, 1) : shape === "radar" ? new THREE.TorusKnotGeometry(0.25, 0.06, 64, 8) : new THREE.OctahedronGeometry(0.38, 0);
+    const holo = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: r.color, wireframe: true, transparent: true, opacity: 0.75 }));
+    holo.position.set(p.x, 1.25, p.z); scene.add(holo);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.7, 24, 1, true), new THREE.MeshBasicMaterial({ color: r.color, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }));
+    beam.position.set(p.x, 0.9, p.z); scene.add(beam);
+    animated.push((tt) => { holo.rotation.y = tt * 0.6; holo.rotation.x = Math.sin(tt * 0.4) * 0.3; holo.position.y = 1.25 + Math.sin(tt * 1.2 + x) * 0.07; });
+    for (const s of spots) stations.push({ room: roomI, kind, spot: s, look: p.clone(), occupant: null });
+  }
+
+  // Skanner
+  desk(0, 2, 1, "scan", "radar"); desk(0, 5, 1, "scan", "code"); desk(0, 8, 1, "scan", "radar");
+  holoTable(0, 5, 7, "scan", "radar", [[4, 7], [6, 7], [5, 8], [5, 6]]);
+  // Risiko
+  holoTable(1, 17, 5, "risk", "octa", [[16, 5], [18, 5], [17, 4], [17, 6]]);
+  terminal(1, 14, 1, "risk", "bars", [[14, 2]]); terminal(1, 20, 1, "risk", "bars", [[20, 2]]);
+  terminal(1, 14, 9, "risk", "bars", [[14, 8]]); terminal(1, 20, 9, "risk", "bars", [[20, 8]]);
+  // Trading
+  desk(2, 26, 3, "trade", "chart"); desk(2, 29, 3, "trade", "chart"); desk(2, 32, 3, "trade", "chart");
+  desk(2, 27, 8, "monitor", "chart", -1); desk(2, 31, 8, "monitor", "chart", -1);
+  // Stor skjerm på veggen i trading
+  { const p = cw(29, -1); const big = new THREE.Mesh(new THREE.PlaneGeometry(8, 2.2), new THREE.MeshBasicMaterial({ map: makeScreen("chart", "#ff3d9a", 512, 140), toneMapped: false })); big.position.set(p.x, 1.9, p.z + 0.52); scene.add(big); }
+  { const p = cw(5, -1); const big = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.6), new THREE.MeshBasicMaterial({ map: makeScreen("radar", "#a855f7", 384, 110), toneMapped: false })); big.position.set(p.x, 1.9, p.z + 0.52); scene.add(big); }
+  // Kodelab
+  for (const [x, z] of [[2, 14], [5, 14], [8, 14], [2, 19], [5, 19], [8, 19]]) desk(3, x, z, "code", "code");
+  // Kommando: portal
+  for (let x = 16; x <= 18; x++) for (let z = 16; z <= 18; z++) block(x, z);
+  {
+    const p = cw(17, 17);
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.7, 0.3, 32), M.desk); ped.position.set(p.x, 0.15, p.z); scene.add(ped);
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.07, 12, 64), emissive("#2dd4bf", 2.6)); ring1.position.set(p.x, 1.6, p.z); scene.add(ring1);
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.04, 8, 48), emissive("#a855f7", 2.4)); ring2.position.set(p.x, 1.6, p.z); scene.add(ring2);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1.1, 48), new THREE.MeshBasicMaterial({ color: "#2dd4bf", transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false })); disc.position.set(p.x, 1.6, p.z); scene.add(disc);
+    animated.push((t) => { ring1.rotation.y = t * 0.5; ring1.rotation.x = Math.sin(t * 0.3) * 0.4; ring2.rotation.x = t * 0.8; ring2.rotation.z = t * 0.3; disc.lookAt(camera.position); disc.material.opacity = 0.14 + Math.sin(t * 2) * 0.06; });
+    for (const s of [[15, 17], [19, 17], [17, 15], [17, 19], [15, 15], [19, 19]]) stations.push({ room: 4, kind: "hub", spot: s, look: p.clone(), occupant: null });
+  }
+  holoTable(4, 13, 13, "hub", "globe", [[14, 13], [13, 14]]);
+  // Lading: ladeplater (blokkerer ikke)
+  for (const [x, z] of [[26, 20], [29, 20], [32, 20], [26, 17], [32, 17]]) {
+    const p = cw(x, z);
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.06, 24), M.desk); pad.position.set(p.x, 0.03, p.z); scene.add(pad);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.03, 8, 32), emissive("#818cf8", 2.2)); ring.rotation.x = Math.PI / 2; ring.position.set(p.x, 0.08, p.z); scene.add(ring);
+    animated.push((t) => { ring.scale.setScalar(1 + Math.sin(t * 3 + x) * 0.06); });
+    stations.push({ room: 5, kind: "charge", spot: [x, z], look: null, occupant: null });
+  }
+  terminal(5, 29, 13, "post", "code", [[29, 14], [28, 14], [30, 14]]);
+
+  // Partikler som svever
+  const count = isMobile ? 220 : 500;
+  const pos = new Float32Array(count * 3), speeds = new Float32Array(count);
+  for (let i = 0; i < count; i++) { pos[i * 3] = (Math.random() - 0.5) * W; pos[i * 3 + 1] = Math.random() * 6; pos[i * 3 + 2] = (Math.random() - 0.5) * H; speeds[i] = 0.1 + Math.random() * 0.35; }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const particles = new THREE.Points(pg, new THREE.PointsMaterial({ color: "#b794ff", size: 0.06, transparent: true, opacity: 0.7, depthWrite: false }));
+  scene.add(particles);
+  M.particles = particles;
+  animated.push((t, dt) => {
+    if (!particles.visible) return;
+    for (let i = 0; i < count; i++) { pos[i * 3 + 1] += speeds[i] * dt; if (pos[i * 3 + 1] > 6) pos[i * 3 + 1] = 0; }
+    pg.attributes.position.needsUpdate = true;
+  });
+}
+
+/* =========================================================================
+   5. Agenter
+   ========================================================================= */
+const agents = [];
+const G = {}; // delte geometrier
+function initAgentGeo() {
+  G.body = new THREE.CapsuleGeometry(0.17, 0.2, 4, 10);
+  G.head = new THREE.SphereGeometry(0.17, 16, 12);
+  G.headBox = new THREE.BoxGeometry(0.3, 0.26, 0.28);
+  G.headIco = new THREE.IcosahedronGeometry(0.18, 0);
+  G.visor = new THREE.BoxGeometry(0.22, 0.07, 0.05);
+  G.visorWide = new THREE.BoxGeometry(0.3, 0.09, 0.05);
+  G.limb = new THREE.BoxGeometry(0.07, 0.22, 0.07);
+  G.arm = new THREE.BoxGeometry(0.055, 0.2, 0.055);
+  G.ant = new THREE.CylinderGeometry(0.008, 0.008, 0.16, 4);
+  G.bulb = new THREE.SphereGeometry(0.035, 8, 6);
+  G.dish = new THREE.ConeGeometry(0.09, 0.06, 12, 1, true);
+  G.belly = new THREE.CircleGeometry(0.05, 12);
+  G.shadow = new THREE.CircleGeometry(0.26, 16);
+  G.box = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+  G.ring = new THREE.RingGeometry(0.34, 0.42, 32);
+  M.shadow = new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.45, depthWrite: false });
+  M.shell = new THREE.MeshStandardMaterial({ color: "#e9e4f5", roughness: 0.35, metalness: 0.25 });
+  M.shellDark = new THREE.MeshStandardMaterial({ color: "#2a2140", roughness: 0.4, metalness: 0.5 });
+  M.joint = new THREE.MeshStandardMaterial({ color: "#3a2f55", roughness: 0.5, metalness: 0.4 });
+  M.role = {};
+  for (const k of ROLE_KEYS) M.role[k] = emissive(ROLES[k].color, 2.4);
+}
+
+let agentSeq = 0;
+class Agent {
+  constructor(role, cell) {
+    this.id = ++agentSeq;
+    this.role = role;
+    this.cfg = ROLES[role];
+    this.name = NAMES[(this.id - 1) % NAMES.length] + (this.id > NAMES.length ? "-" + Math.ceil(this.id / NAMES.length) : "");
+    this.speed = this.cfg.speed[0] + Math.random() * (this.cfg.speed[1] - this.cfg.speed[0]);
+    this.pos = cw(cell[0], cell[1]);
+    this.heading = Math.random() * Math.PI * 2;
+    this.path = [];
+    this.state = "idle";
+    this.timer = 0.5 + Math.random() * 2;
+    this.job = null;
+    this.label = "";
+    this.battery = 55 + Math.random() * 45;
+    this.done = 0;
+    this.phase = Math.random() * 10;
+    this.station = null;
+    this.partner = null;
+    this.workTotal = 0;
+    this.stuck = 0;
+    this.build();
+  }
+
+  build() {
+    const g = new THREE.Group();
+    const acc = M.role[this.role];
+    const shell = this.role === "trading" || this.role === "strategy" ? M.shellDark : M.shell;
+    const sh = new THREE.Mesh(G.shadow, M.shadow); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.01; g.add(sh);
+    // Ben
+    this.legs = [-0.08, 0.08].map((x) => { const p = new THREE.Group(); p.position.set(x, 0.27, 0); const l = new THREE.Mesh(G.limb, M.joint); l.position.y = -0.12; p.add(l); g.add(p); return p; });
+    // Kropp
+    const body = new THREE.Group(); body.position.y = 0.47; g.add(body); this.body = body;
+    const torso = new THREE.Mesh(G.body, shell); body.add(torso);
+    const belly = new THREE.Mesh(G.belly, acc); belly.position.set(0, 0.02, 0.172); body.add(belly);
+    // Armer
+    this.arms = [-0.22, 0.22].map((x) => { const p = new THREE.Group(); p.position.set(x, 0.1, 0); const a = new THREE.Mesh(G.arm, M.joint); a.position.y = -0.1; p.add(a); body.add(p); return p; });
+    // Hode
+    const head = new THREE.Group(); head.position.y = 0.36; body.add(head); this.head = head;
+    const geo = { research: G.head, strategy: G.headBox, trading: G.head, optimization: G.headIco, coding: G.headBox, communication: G.head }[this.role];
+    head.add(new THREE.Mesh(geo, shell));
+    const visor = new THREE.Mesh(this.role === "trading" || this.role === "strategy" ? G.visorWide : G.visor, acc); visor.position.set(0, 0.01, 0.16); head.add(visor);
+    const ant = new THREE.Mesh(G.ant, M.joint); ant.position.y = 0.24; head.add(ant);
+    const bulb = new THREE.Mesh(G.bulb, acc); bulb.position.y = 0.33; head.add(bulb); this.bulb = bulb;
+    if (this.role === "research") { const d = new THREE.Mesh(G.dish, acc); d.position.set(0.15, 0.12, 0); d.rotation.z = -0.8; head.add(d); }
+    if (this.role === "coding") { const a2 = ant.clone(); a2.position.x = 0.09; head.add(a2); const b2 = bulb.clone(); b2.position.x = 0.09; head.add(b2); }
+    if (this.role === "strategy") g.scale.setScalar(1.12);
+    if (this.role === "optimization") { const r = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.012, 6, 24), acc); r.rotation.x = Math.PI / 2; r.position.y = 0.05; head.add(r); this.halo = r; }
+    // Pakke for budbringere
+    this.parcel = new THREE.Mesh(G.box, acc); this.parcel.position.set(0, 0.05, 0.22); this.parcel.visible = false; body.add(this.parcel);
+    // Valgt-ring
+    this.selRing = new THREE.Mesh(G.ring, new THREE.MeshBasicMaterial({ color: this.cfg.color, transparent: true, opacity: 0.9, side: THREE.DoubleSide })); this.selRing.rotation.x = -Math.PI / 2; this.selRing.position.y = 0.02; this.selRing.visible = false; g.add(this.selRing);
+    // Treffboks for klikk
+    this.hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.5), new THREE.MeshBasicMaterial({ visible: false })); this.hit.position.y = 0.55; this.hit.userData.agent = this; g.add(this.hit);
+    // Statusboble
+    this.tagEl = document.createElement("div");
+    this.tagEl.className = "tag3d"; this.tagEl.style.setProperty("--c", this.cfg.color);
+    this.tag = new CSS2DObject(this.tagEl); this.tag.position.y = 1.35; g.add(this.tag);
+    g.position.copy(this.pos);
+    g.rotation.y = this.heading;
+    this.group = g;
+    scene.add(g);
+    this.updateTag(true);
+  }
+
+  dispose() {
+    scene.remove(this.group);
+    this.tag.element.remove();
+    if (this.station) this.station.occupant = null;
+  }
+
+  setLabel(text) { this.label = text; this.updateTag(true); }
+
+  updateTag(force) {
+    const prog = this.state === "working" && this.workTotal ? Math.min(1, 1 - this.timer / this.workTotal) : null;
+    const key = `${this.state}|${this.label}|${prog === null ? "" : Math.round(prog * 20)}|${this.selected}`;
+    if (!force && key === this._tagKey) return;
+    this._tagKey = key;
+    const icon = { working: "⚙", walking: "→", communicating: "💬", celebrating: "★", sad: "↓", charging: "⚡", waiting: "…", idle: "·" }[this.state] || "·";
+    this.tagEl.classList.toggle("sel", !!this.selected);
+    // Agenter som bare rusler rundt vises som en liten prikk, så etikettene ikke drukner det som faktisk skjer.
+    const ambient = !this.label || /Ser seg rundt|Tar en pause/.test(this.label);
+    const quiet = !this.selected && (["idle", "waiting", "charging"].includes(this.state) || (this.state === "walking" && ambient));
+    this.tagEl.classList.toggle("quiet", quiet);
+    this.tagEl.innerHTML = `<b>${icon} ${this.name}</b> ${escapeHtml(this.label || STATE_TEXT[this.state])}${prog !== null ? `<div class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></div>` : ""}`;
+  }
+
+  goTo(cell, then) {
+    const p = findPath(this.pos, cell);
+    if (!p) { this.state = "idle"; this.timer = 0.5; return false; }
+    this.path = p;
+    this.state = "walking";
+    this.arrive = then;
+    this.stuck = 0;
+    return true;
+  }
+
+  releaseStation() { if (this.station) { this.station.occupant = null; this.station = null; } }
+
+  takeStation(kind, roomI) {
+    this.releaseStation();
+    const options = stations.filter((s) => s.kind === kind && (roomI === undefined || s.room === roomI) && !s.occupant);
+    if (!options.length) return null;
+    const s = options.sort((a, b) => cw(...a.spot).distanceTo(this.pos) - cw(...b.spot).distanceTo(this.pos))[Math.floor(Math.random() * Math.min(2, options.length))];
+    s.occupant = this;
+    this.station = s;
+    return s;
+  }
+
+  work(seconds, label, onDone) {
+    this.state = "working";
+    this.timer = seconds;
+    this.workTotal = seconds;
+    this.label = label;
+    this.onWorkDone = onDone;
+    this.updateTag(true);
+  }
+
+  /** Gå til en stasjon av en type og jobb der. */
+  doAt(kind, roomI, seconds, label, onDone) {
+    const s = this.takeStation(kind, roomI);
+    this.setLabel(label);
+    const go = () => this.work(seconds, label, onDone);
+    if (!s) { this.wanderNear(roomI ?? this.cfg.room, () => go()); return; }
+    if (!this.goTo(s.spot, go)) { this.releaseStation(); go(); }
+  }
+
+  wanderNear(roomI, then) {
+    const r = ROOMS[roomI];
+    for (let i = 0; i < 20; i++) {
+      const x = r.x0 + Math.floor(Math.random() * (r.x1 - r.x0 + 1)), z = r.z0 + Math.floor(Math.random() * (r.z1 - r.z0 + 1));
+      if (free(x, z) && this.goTo([x, z], then)) return;
+    }
+    then && then();
+  }
+
+  celebrate(sad = false) {
+    this.state = sad ? "sad" : "celebrating";
+    this.timer = sad ? 2.2 : 2.4;
+    this.label = sad ? "Det gikk dårlig" : "Yes!";
+    this.updateTag(true);
+  }
+
+  update(dt, t) {
+    this.battery = Math.max(0, this.battery - dt * (this.state === "walking" ? 0.55 : 0.25));
+    this.phase += dt;
+    const body = this.body, legs = this.legs, arms = this.arms;
+
+    if (this.state === "walking") {
+      const target = this.path[0];
+      if (!target) { this.state = "idle"; this.timer = 0.2; const cb = this.arrive; this.arrive = null; cb && cb(); }
+      else {
+        const dx = target.x - this.pos.x, dz = target.z - this.pos.z, dist = Math.hypot(dx, dz);
+        if (dist < 0.12) { this.path.shift(); }
+        else {
+          const want = Math.atan2(dx, dz);
+          let diff = ((want - this.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+          this.heading += diff * Math.min(1, dt * 9);
+          const sp = this.speed * (Math.abs(diff) > 1.2 ? 0.35 : 1) * (this.battery < 10 ? 0.6 : 1);
+          const step = Math.min(dist, sp * dt);
+          const nx = this.pos.x + (dx / dist) * step, nz = this.pos.z + (dz / dist) * step;
+          const before = this.pos.clone();
+          this.pos.x = nx; this.pos.z = nz;
+          this.stuck = before.distanceTo(this.pos) < sp * dt * 0.2 ? this.stuck + dt : 0;
+        }
+      }
+      const s = this.phase * this.speed * 6.5;
+      legs[0].rotation.x = Math.sin(s) * 0.7; legs[1].rotation.x = -Math.sin(s) * 0.7;
+      arms[0].rotation.x = -Math.sin(s) * 0.6; arms[1].rotation.x = Math.sin(s) * 0.6;
+      body.position.y = 0.47 + Math.abs(Math.sin(s)) * 0.04;
+      this.head.rotation.y *= 0.9;
+    } else {
+      legs[0].rotation.x *= 0.85; legs[1].rotation.x *= 0.85;
+      body.position.y += (0.47 - body.position.y) * 0.2;
+      this.timer -= dt;
+
+      if (this.state === "working") {
+        arms[0].rotation.x = -1.1 + Math.sin(this.phase * 18) * 0.15;
+        arms[1].rotation.x = -1.1 + Math.cos(this.phase * 17) * 0.15;
+        this.head.rotation.x = 0.15 + Math.sin(this.phase * 2) * 0.05;
+        if (this.station?.look) this.faceTowards(this.station.look, dt);
+        this.updateTag();
+        if (this.timer <= 0) {
+          this.head.rotation.x = 0; this.done++; stats.done++;
+          this.releaseStation();
+          const cb = this.onWorkDone; this.onWorkDone = null;
+          this.state = "idle"; this.timer = 0.3 + Math.random(); this.label = ""; this.workTotal = 0;
+          this.updateTag(true);
+          cb && cb(this);
+        }
+      } else if (this.state === "communicating") {
+        arms[0].rotation.x = -0.6 + Math.sin(this.phase * 6) * 0.4;
+        arms[1].rotation.x *= 0.85;
+        this.head.rotation.x = Math.sin(this.phase * 8) * 0.12;
+        if (this.partner) this.faceTowards(this.partner.pos, dt);
+        if (this.timer <= 0) { this.head.rotation.x = 0; this.state = "idle"; this.timer = 0.2; const cb = this.onTalkDone; this.onTalkDone = null; this.partner = null; this.label = ""; this.updateTag(true); cb && cb(this); }
+      } else if (this.state === "celebrating") {
+        body.position.y = 0.47 + Math.abs(Math.sin(this.phase * 9)) * 0.25;
+        arms[0].rotation.x = arms[1].rotation.x = -2.6 + Math.sin(this.phase * 14) * 0.3;
+        this.group.rotation.y += dt * 4;
+        this.heading = this.group.rotation.y;
+        if (this.timer <= 0) { arms[0].rotation.x = arms[1].rotation.x = 0; this.state = "idle"; this.timer = 0.4; this.label = ""; this.updateTag(true); }
+      } else if (this.state === "sad") {
+        this.head.rotation.x = 0.45; this.head.rotation.y = Math.sin(this.phase * 5) * 0.3;
+        arms[0].rotation.x *= 0.9; arms[1].rotation.x *= 0.9;
+        if (this.timer <= 0) { this.head.rotation.set(0, 0, 0); this.state = "idle"; this.timer = 0.4; this.label = ""; this.updateTag(true); }
+      } else if (this.state === "charging") {
+        this.battery = Math.min(100, this.battery + dt * 14);
+        this.bulb.scale.setScalar(1 + Math.sin(this.phase * 6) * 0.4);
+        this.label = `Lader ${Math.round(this.battery)}%`; this.updateTag();
+        if (this.battery >= 99 || this.timer <= -30) { this.bulb.scale.setScalar(1); this.releaseStation(); this.state = "idle"; this.timer = 0.3; this.label = ""; this.updateTag(true); }
+      } else if (this.state === "waiting") {
+        if (this.partner) this.faceTowards(this.partner.pos, dt);
+        this.head.rotation.y = Math.sin(this.phase * 1.5) * 0.2;
+        if (this.timer <= 0) { this.state = "idle"; this.partner = null; this.job = null; this.label = ""; this.updateTag(true); }
+      } else {
+        // idle: se seg rundt
+        arms[0].rotation.x *= 0.85; arms[1].rotation.x *= 0.85;
+        this.head.rotation.y = Math.sin(this.phase * 1.3 + this.id) * 0.6;
+        // Sikkerhetsnett: en jobb som har stått stille lenge slippes
+        this.jobIdle = this.job ? (this.jobIdle || 0) + dt : 0;
+        if (this.jobIdle > 10) { this.job = null; this.jobIdle = 0; }
+        if (this.timer <= 0) director.decide(this);
+      }
+    }
+
+    if (this.halo) this.halo.rotation.z += dt * 2;
+    this.parcel.rotation.y += dt * 2;
+
+    // Hold avstand til andre agenter (enkel styring)
+    for (const o of agents) {
+      if (o === this) continue;
+      const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, d2 = dx * dx + dz * dz;
+      if (d2 > 0.0001 && d2 < 0.36) {
+        const d = Math.sqrt(d2), push = (0.6 - d) * (this.state === "walking" ? 1.6 : 0.8) * dt;
+        const nx = this.pos.x + (dx / d) * push, nz = this.pos.z + (dz / d) * push;
+        if (walkableAt(nx, nz)) { this.pos.x = nx; this.pos.z = nz; }
+      }
+    }
+    // Står den fast, finn ny vei
+    if (this.state === "walking" && this.stuck > 1.2 && this.path.length) { const last = this.path[this.path.length - 1]; const [cx, cz] = cellOf(last.x, last.z); const cb = this.arrive; this.goTo([cx, cz], cb); }
+
+    this.group.position.x = this.pos.x;
+    this.group.position.z = this.pos.z;
+    if (this.state !== "celebrating") this.group.rotation.y = this.heading;
+    this.selRing.visible = !!this.selected;
+    if (this.selected) this.selRing.rotation.z += dt;
+  }
+
+  faceTowards(v, dt) {
+    const want = Math.atan2(v.x - this.pos.x, v.z - this.pos.z);
+    let diff = ((want - this.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    this.heading += diff * Math.min(1, dt * 6);
+  }
+}
+
+/* =========================================================================
+   6. Oppgaver: kø, overleveringer og valg av neste aktivitet
+   ========================================================================= */
+const stats = { done: 0, notes: 0 };
+const queue = []; // { role, run(agent) }
+
+const director = {
+  /** Legg en jobb i køen for en rolle. */
+  post(role, run) { queue.push({ role, run, at: performance.now() }); this.assign(); },
+
+  assign() {
+    for (let i = 0; i < queue.length; i++) {
+      const job = queue[i];
+      const free_ = agents.filter((a) => a.role === job.role && a.battery > 6 && ["idle", "walking", "working"].includes(a.state) && !a.job);
+      // Foretrekk ledige agenter, deretter de som bare driver med «fyll-oppgaver»
+      const cand = free_.sort((a, b) => (a.state === "idle" ? 0 : 1) - (b.state === "idle" ? 0 : 1) || a.pos.distanceTo(ROOM_CENTER(a.cfg.room)) - b.pos.distanceTo(ROOM_CENTER(b.cfg.room)))[0];
+      if (!cand) continue;
+      queue.splice(i--, 1);
+      this.start(cand, job.run);
+    }
+  },
+
+  start(agent, run) {
+    agent.releaseStation();
+    agent.onWorkDone = null;
+    agent.job = true;
+    agent.path = [];
+    agent.state = "idle";
+    run(agent, () => { agent.job = null; });
+  },
+
+  /** Agent A går til en agent med rolle `role`, de snakker, og B får `next`. */
+  handoff(from, role, text, next) {
+    const target = agents.filter((a) => a.role === role && a !== from && !a.job && a.battery > 6).sort((a, b) => a.pos.distanceTo(from.pos) - b.pos.distanceTo(from.pos))[0];
+    if (!target) { from.job = null; this.post(role, next); return; }
+    target.job = true;
+    target.releaseStation();
+    target.path = [];
+    target.state = "waiting"; target.timer = 14; target.partner = from; target.label = `Venter på ${from.name}`; target.updateTag(true);
+    from.job = true;
+    from.setLabel(`${text} → ${target.name}`);
+    const [tx, tz] = cellOf(target.pos.x, target.pos.z);
+    const meet = nearestFree(tx, tz, from.pos);
+    const talk = () => {
+      for (const [a, b] of [[from, target], [target, from]]) { a.state = "communicating"; a.timer = 1.8; a.partner = b; a.label = text; a.updateTag(true); }
+      note(text, from.cfg.color, target.pos, 1.6);
+      feed(`<b style="color:${from.cfg.color}">${from.name}</b> → <b style="color:${target.cfg.color}">${target.name}</b>: ${escapeHtml(text)}`);
+      from.onTalkDone = () => { from.job = null; };
+      target.onTalkDone = () => { target.job = null; this.start(target, next); };
+    };
+    if (!meet || !from.goTo(meet, talk)) talk();
+  },
+
+  /** Hva gjør en agent når den ikke har en jobb? Små fyll-oppgaver så laben alltid lever. */
+  decide(a) {
+    if (a.job) return;
+    if (queue.some((j) => j.role === a.role)) { this.assign(); if (a.job) return; }
+    if (a.battery < 22) {
+      const s = a.takeStation("charge");
+      if (s) { a.setLabel("Går for å lade"); a.goTo(s.spot, () => { a.state = "charging"; a.timer = 0; a.label = "Lader"; a.updateTag(true); }); return; }
+    }
+    const r = Math.random();
+    const role = a.role;
+    if (r < 0.12) { a.setLabel("Tar en pause"); return a.wanderNear(4, () => { a.state = "idle"; a.timer = 1 + Math.random() * 2; a.label = ""; }); }
+    if (r < 0.2) { a.state = "idle"; a.timer = 1 + Math.random() * 1.5; a.label = ""; a.updateTag(true); return; }
+    const fill = {
+      research: ["scan", 0, ["Skanner DexScreener", "Leter etter nye pools", "Leser pump.fun"]],
+      strategy: ["risk", 1, ["Analyserer holdere", "Sjekker likviditet", "Leter etter rug-tegn"]],
+      trading: ["trade", 2, ["Følger orderboken", "Sjekker slippage", "Venter på signal"]],
+      optimization: ["monitor", 2, ["Passer på stop-loss", "Måler gevinst", "Justerer mål"]],
+      coding: ["code", 3, ["Oppdaterer koden", "Skriver tester", "Optimaliserer RPC-kall"]],
+      communication: null,
+    }[role];
+    if (!fill) {
+      const kinds = ["scan", "risk", "trade", "code", "post", "hub"];
+      const k = kinds[Math.floor(Math.random() * kinds.length)];
+      a.parcel.visible = true;
+      return a.doAt(k, undefined, 1.2, "Leverer beskjed", () => { a.parcel.visible = false; });
+    }
+    const [kind, room, labels] = fill;
+    a.doAt(kind, room, 2.5 + Math.random() * 4, labels[Math.floor(Math.random() * labels.length)]);
+  },
+};
+
+const ROOM_CENTER = (i) => { const r = ROOMS[i]; return cw((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2); };
+function nearestFree(x, z, from) {
+  let best = null, bd = Infinity;
+  for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dz) continue;
+    if (!free(x + dx, z + dz)) continue;
+    const d = cw(x + dx, z + dz).distanceTo(from);
+    if (d < bd) { bd = d; best = [x + dx, z + dz]; }
+  }
+  return best;
+}
+
+/* --- Kjeder av jobber for hver hendelse fra boten --- */
+const flows = {
+  scan(n) {
+    director.post("research", (a, end) => a.doAt("scan", 0, 3, `Skanner ${n} nye tokens`, () => {
+      note(`Skann ferdig · ${n} nye tokens`, ROLES.research.color, a.pos);
+      director.handoff(a, "strategy", `${n} tokens til sjekk`, (b, end2) => b.doAt("risk", 1, 3, `Sjekker ${n} tokens`, () => end2()));
+    }));
+  },
+  rejected(count, reason) {
+    director.post("strategy", (a, end) => a.doAt("risk", 1, 2.4, `Vurderer ${count} tokens`, () => {
+      note(count > 1 ? `Avviste ${count} tokens` : "Token avvist", "#ff7a8a", a.pos, 1.4);
+      if (reason) feed(`<b style="color:${ROLES.strategy.color}">${a.name}</b> avviste ${count > 1 ? count + " tokens" : "en token"}: ${escapeHtml(reason)}`);
+      end();
+    }));
+  },
+  rug(sym) {
+    director.post("strategy", (a, end) => a.doAt("risk", 1, 2, `Fant rug-tegn i ${sym}`, () => { note(`Rug stoppet · ${sym}`, "#ff4d5e", a.pos); a.celebrate(false); end(); }));
+  },
+  approved(sym, why) {
+    director.post("strategy", (a, end) => a.doAt("risk", 1, 2, `Godkjenner ${sym}`, () => { note(`Godkjent ${sym}${why ? " · " + why : ""}`, ROLES.strategy.color, a.pos); end(); }));
+  },
+  buy(sym, size) {
+    director.post("strategy", (a) => a.doAt("risk", 1, 1.8, `Godkjenner ${sym}`, () => {
+      director.handoff(a, "trading", `Kjøp ${sym}`, (t, end) => t.doAt("trade", 2, 2.4, `Kjøper ${sym}`, () => {
+        note(`Kjøpt ${sym} · ${size}`, "#2fe0a0", t.pos, 2);
+        t.celebrate();
+        director.handoff(t, "optimization", `Pass på ${sym}`, (o, end3) => o.doAt("monitor", 2, 3, `Overvåker ${sym}`, () => end3()));
+      }));
+    }));
+  },
+  sell(sym, pnlText, win) {
+    director.post("optimization", (o) => o.doAt("monitor", 2, 1.6, win ? `Mål nådd for ${sym}` : `Stop-loss for ${sym}`, () => {
+      director.handoff(o, "trading", `Selg ${sym}`, (t, end) => t.doAt("trade", 2, 2, `Selger ${sym}`, () => {
+        note(`${win ? "Gevinst" : "Tap"} ${sym} · ${pnlText}`, win ? "#2fe0a0" : "#ff4d5e", t.pos, 2);
+        t.celebrate(!win);
+        if (win) agents.filter((x) => x.role === "trading" && x !== t && !x.job && x.pos.distanceTo(t.pos) < 6).forEach((x) => x.celebrate());
+        end();
+      }));
+    }));
+  },
+  halt() {
+    note("Dagstap-grensen nådd · handel stoppet", "#ffb347", ROOM_CENTER(2), 2.4);
+    for (const a of agents.filter((x) => x.role === "trading")) {
+      director.post("trading", (t, end) => { const s = t.takeStation("charge"); t.setLabel("Hviler til i morgen"); if (s) t.goTo(s.spot, () => { t.state = "charging"; t.timer = 0; end(); }); else end(); });
+    }
+  },
+  heartbeat() {
+    director.post("coding", (a, end) => a.doAt("code", 3, 2, "Systemsjekk", () => { note("Systemsjekk OK", ROLES.coding.color, a.pos, 1); end(); }));
+  },
+  error(text) {
+    director.post("coding", (a, end) => a.doAt("code", 3, 3.5, "Feilsøker", () => { note("Feil håndtert", "#ffb347", a.pos, 1.2); feed(`<b class="warn">Feil:</b> ${escapeHtml(text)}`); end(); }));
+  },
+  control(text) {
+    director.post("communication", (a, end) => { a.parcel.visible = true; a.doAt("hub", 4, 1.5, "Ordre fra deg", () => { a.parcel.visible = false; note(text, ROLES.communication.color, a.pos, 1.5); end(); }); });
+  },
+};
+
+/* =========================================================================
+   7. Notifikasjoner og aktivitetslogg
+   ========================================================================= */
+const notes = [];
+function note(text, color, at, life = 1.6) {
+  if (!scene) return;
+  if (notes.length > 14) { const n = notes.shift(); scene.remove(n.obj); n.obj.element.remove(); }
+  const el = document.createElement("div");
+  el.className = "note3d"; el.style.setProperty("--c", color); el.textContent = text;
+  const obj = new CSS2DObject(el);
+  obj.position.set(at.x, 1.9, at.z);
+  scene.add(obj);
+  notes.push({ obj, el, t: 0, life: 2.6 * life });
+  stats.notes++;
+}
+function updateNotes(dt) {
+  for (let i = notes.length - 1; i >= 0; i--) {
+    const n = notes[i];
+    n.t += dt;
+    n.obj.position.y += dt * 0.55;
+    const k = n.t / n.life;
+    n.el.style.opacity = k < 0.1 ? k * 10 : k > 0.75 ? Math.max(0, (1 - k) * 4) : 1;
+    if (n.t >= n.life) { scene.remove(n.obj); n.el.remove(); notes.splice(i, 1); }
+  }
+}
+
+const feedEl = document.getElementById("feedlist");
+function feed(html, time = new Date()) {
+  const d = document.createElement("div");
+  d.innerHTML = `<time>${time.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}</time><span>${html}</span>`;
+  feedEl.prepend(d);
+  while (feedEl.children.length > 60) feedEl.lastChild.remove();
+}
+function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* =========================================================================
+   8. Data: ekte hendelser fra boten, ellers demo
+   ========================================================================= */
+const data = { mode: "connecting", lastTs: null, state: null, demo: { pnl: 0, day: 0, trades: 0, wins: 0, bal: 1 } };
+const sym = (msg) => (msg.match(/\$[A-Za-z0-9_.-]+/) || [""])[0];
+
+function handleEvents(events) {
+  let rejected = 0, reason = "";
+  for (const e of events) {
+    const s = sym(e.msg);
+    switch (e.type) {
+      case "scan": { const n = parseInt(e.msg, 10) || 1; flows.scan(n); feed(`<b style="color:${ROLES.research.color}">Skanner:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break; }
+      case "safety": rejected++; if (!reason) reason = (e.msg.split("·").pop() || "").trim(); break;
+      case "rug": flows.rug(s || "token"); feed(`<b class="down">Rug stoppet:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break;
+      case "risk_block": flows.approved(s || "token", "maks posisjoner"); feed(`<b class="warn">Blokkert:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break;
+      case "buy": { const size = (e.msg.match(/([\d.]+) SOL/) || [, "?"])[1] + " SOL"; flows.buy(s || "token", size); feed(`<b class="up">Kjøp:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break; }
+      case "sell": case "stop": { const pnl = e.data?.pnlSol; const win = typeof pnl === "number" ? pnl >= 0 : e.type === "sell"; flows.sell(s || "token", typeof pnl === "number" ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(4)} SOL` : "", win); feed(`<b class="${win ? "up" : "down"}">${win ? "Gevinst" : "Tap"}:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break; }
+      case "halt": flows.halt(); feed(`<b class="warn">Stopp:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break;
+      case "heartbeat": flows.heartbeat(); break;
+      case "error": flows.error(e.msg); break;
+      case "control": flows.control("Mottatt"); feed(`<b style="color:${ROLES.communication.color}">Kontroll:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break;
+      case "start": feed(`<b>Start:</b> ${escapeHtml(e.msg)}`, new Date(e.ts)); break;
+    }
+  }
+  if (rejected) flows.rejected(rejected, reason);
+}
+
+async function poll() {
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const s = await res.json();
+    const first = data.mode !== "live";
+    data.mode = "live";
+    data.state = s;
+    const evs = s.events || [];
+    if (first) {
+      data.lastTs = evs.length ? evs[evs.length - 1].ts : new Date().toISOString();
+      feed("<b class='up'>Koblet til boten.</b> Agentene viser nå det boten faktisk gjør.");
+      evs.slice(-8).forEach((e) => e.type !== "heartbeat" && feed(escapeHtml(e.msg), new Date(e.ts)));
+    } else {
+      const fresh = evs.filter((e) => e.ts > data.lastTs);
+      if (fresh.length) { data.lastTs = fresh[fresh.length - 1].ts; handleEvents(fresh); }
+    }
+    if (Array.isArray(s.equity) && s.equity.length) { marketLine.length = 0; s.equity.slice(-80).forEach((p) => marketLine.push(p[1])); }
+  } catch {
+    if (data.mode !== "demo") {
+      data.mode = "demo";
+      feed("<b class='warn'>Fant ikke boten.</b> Viser demo-data. Start boten med <b>npm start</b> for ekte data.");
+    }
+  }
+  renderHud();
+}
+
+let demoTimer = 2;
+function demoTick(dt) {
+  if (data.mode !== "demo") return;
+  demoTimer -= dt;
+  if (demoTimer > 0) return;
+  demoTimer = 3 + Math.random() * 5;
+  const d = data.demo, r = Math.random(), names = ["$MOON", "$FROG", "$GIGA", "$PNUT", "$BONK2", "$CHAD", "$NEKO", "$WAGMI", "$ZAP"];
+  const s = names[Math.floor(Math.random() * names.length)];
+  if (r < 0.28) { const n = 1 + Math.floor(Math.random() * 12); flows.scan(n); feed(`<b style="color:${ROLES.research.color}">Skanner:</b> ${n} nye tokens funnet (demo)`); }
+  else if (r < 0.48) { const n = 2 + Math.floor(Math.random() * 8); flows.rejected(n, "For lav likviditet"); }
+  else if (r < 0.58) { flows.rug(s); feed(`<b class="down">Rug stoppet:</b> ${s} har mint authority på (demo)`); }
+  else if (r < 0.72) { const size = (0.02 + Math.random() * 0.06).toFixed(3); flows.buy(s, size + " SOL"); feed(`<b class="up">Kjøp:</b> ${s} for ${size} SOL (demo)`); }
+  else if (r < 0.88) {
+    const win = Math.random() < 0.45, pnl = win ? 0.005 + Math.random() * 0.03 : -(0.004 + Math.random() * 0.02);
+    d.pnl += pnl; d.day += pnl; d.trades++; if (win) d.wins++; d.bal += pnl;
+    marketLine.push(d.bal); if (marketLine.length > 80) marketLine.shift();
+    flows.sell(s, `${pnl >= 0 ? "+" : ""}${pnl.toFixed(4)} SOL`, win);
+    feed(`<b class="${win ? "up" : "down"}">${win ? "Gevinst" : "Tap"}:</b> ${s} ${pnl >= 0 ? "+" : ""}${pnl.toFixed(4)} SOL (demo)`);
+  } else { flows.heartbeat(); }
+}
+
+/* =========================================================================
+   9. Grensesnitt
+   ========================================================================= */
+const $ = (id) => document.getElementById(id);
+const sim = { paused: false, speed: 1, speeds: [0.25, 0.5, 1, 2, 4] };
+let selected = null, follow = false;
+
+for (const k of ROLE_KEYS) { const o = document.createElement("option"); o.value = k; o.textContent = ROLES[k].name; $("role-sel").appendChild(o); }
+
+function renderHud() {
+  const live = data.mode === "live", s = data.state;
+  const mode = $("mode");
+  if (live) {
+    const dry = s.mode === "dry";
+    mode.className = "pill " + (dry ? "dry" : "live");
+    mode.textContent = dry ? "Boten · DRY RUN" : "Boten · LIVE";
+    $("botstatus").innerHTML = s.halted ? "<span class='warn'>Stoppet for i dag</span>" : s.paused ? "<span class='warn'>Kjøp pauset</span>" : "<span class='up'>Kjører</span>";
+    $("bal").textContent = s.balanceSol.toFixed(4) + " SOL";
+    const tot = s.stats.realizedSol;
+    $("pnl").textContent = `${tot >= 0 ? "+" : ""}${tot.toFixed(4)} SOL`;
+    $("pnl").className = tot >= 0 ? "up" : "down";
+    $("pnlday").textContent = `I dag ${s.day.realizedPnlSol >= 0 ? "+" : ""}${s.day.realizedPnlSol.toFixed(4)} SOL · ${s.stats.trades} handler · ${s.stats.trades ? Math.round((s.stats.wins / s.stats.trades) * 100) : 0}% treff`;
+    $("pnltag").textContent = dry ? "Simulert med ekte priser, ikke ekte penger" : "Ekte penger";
+    $("pnltag").className = "tag" + (dry ? "" : " up");
+    $("b-botpause").hidden = false;
+    $("b-botpause").textContent = s.paused ? "Fortsett kjøp" : "Pause kjøp";
+  } else {
+    mode.className = "pill demo";
+    mode.textContent = data.mode === "demo" ? "Demo-data" : "Kobler til…";
+    $("botstatus").textContent = data.mode === "demo" ? "Boten kjører ikke" : "Kobler til boten…";
+    const d = data.demo;
+    $("bal").textContent = d.bal.toFixed(4) + " SOL";
+    $("pnl").textContent = `${d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(4)} SOL`;
+    $("pnl").className = d.pnl >= 0 ? "up" : "down";
+    $("pnlday").textContent = `I dag ${d.day >= 0 ? "+" : ""}${d.day.toFixed(4)} SOL · ${d.trades} handler · ${d.trades ? Math.round((d.wins / d.trades) * 100) : 0}% treff`;
+    $("pnltag").textContent = "Demo-data, ikke ekte penger";
+    $("pnltag").className = "tag";
+    $("b-botpause").hidden = true;
+  }
+}
+
+function renderStats(fps) {
+  $("s-agents").textContent = agents.length;
+  $("s-working").textContent = agents.filter((a) => a.state === "working" || a.state === "communicating").length;
+  $("s-done").textContent = stats.done;
+  $("s-queue").textContent = queue.length + agents.filter((a) => a.job).length;
+  $("simstate").textContent = sim.paused ? "Pauset" : `Kjører ${sim.speed}x`;
+  const load = agents.length ? agents.filter((a) => a.state !== "idle").length / agents.length : 0;
+  const bat = agents.length ? agents.reduce((s, a) => s + a.battery, 0) / agents.length : 0;
+  $("p-fps").style.width = Math.min(100, (fps / 60) * 100) + "%"; $("p-fpsv").textContent = fps.toFixed(0);
+  $("p-load").style.width = load * 100 + "%"; $("p-loadv").textContent = Math.round(load * 100) + "%";
+  $("p-bat").style.width = bat + "%"; $("p-batv").textContent = Math.round(bat) + "%";
+  if (selected) renderInspector();
+}
+
+function renderInspector() {
+  const a = selected;
+  $("i-dot").style.color = a.cfg.color;
+  $("i-name").textContent = a.name;
+  $("i-role").textContent = `${a.cfg.name} · ${a.cfg.desc}`;
+  $("i-state").textContent = STATE_TEXT[a.state];
+  $("i-task").textContent = a.label || "–";
+  $("i-bat").textContent = Math.round(a.battery) + "%";
+  $("i-done").textContent = a.done;
+  $("i-speed").textContent = a.speed.toFixed(1) + " m/s";
+  $("i-follow").classList.toggle("on", follow);
+}
+
+function select(a) {
+  if (selected) { selected.selected = false; selected.updateTag(true); }
+  selected = a;
+  follow = false;
+  $("inspect").hidden = !a;
+  if (a) { a.selected = true; a.updateTag(true); renderInspector(); }
+}
+
+function spawn(role, cell) {
+  const r = ROOMS[ROLES[role].room];
+  if (!cell) {
+    for (let i = 0; i < 40; i++) {
+      const x = r.x0 + Math.floor(Math.random() * (r.x1 - r.x0 + 1)), z = r.z0 + Math.floor(Math.random() * (r.z1 - r.z0 + 1));
+      if (free(x, z) && !stations.some((s) => s.spot[0] === x && s.spot[1] === z)) { cell = [x, z]; break; }
+    }
+  }
+  const a = new Agent(role, cell || [17, 14]);
+  agents.push(a);
+  return a;
+}
+
+function populate() {
+  const per = isMobile ? { research: 3, strategy: 3, trading: 3, optimization: 2, coding: 3, communication: 2 } : { research: 5, strategy: 5, trading: 4, optimization: 3, coding: 5, communication: 4 };
+  for (const [role, n] of Object.entries(per)) for (let i = 0; i < n; i++) spawn(role);
+}
+
+function reset() {
+  select(null);
+  for (const a of agents) a.dispose();
+  agents.length = 0;
+  queue.length = 0;
+  for (const n of notes) { scene.remove(n.obj); n.el.remove(); }
+  notes.length = 0;
+  stations.forEach((s) => (s.occupant = null));
+  stats.done = 0;
+  agentSeq = 0;
+  data.demo = { pnl: 0, day: 0, trades: 0, wins: 0, bal: 1 };
+  if (data.mode === "demo") marketLine.length = 0;
+  populate();
+  feed("<b>Laben er nullstilt.</b>");
+  renderHud();
+}
+
+function setFx(on) {
+  fx.on = on;
+  $("b-fx").classList.toggle("on", on);
+  if (!renderer) return;
+  bloom.enabled = on;
+  M.particles.visible = on;
+  scene.fog.far = on ? 70 : 120;
+}
+
+$("b-pause").onclick = () => { sim.paused = !sim.paused; $("b-pause").textContent = sim.paused ? "Fortsett" : "Pause"; $("b-pause").classList.toggle("hot", sim.paused); };
+$("b-slow").onclick = () => { const i = sim.speeds.indexOf(sim.speed); sim.speed = sim.speeds[Math.max(0, i - 1)]; $("speed").textContent = sim.speed + "x"; };
+$("b-fast").onclick = () => { const i = sim.speeds.indexOf(sim.speed); sim.speed = sim.speeds[Math.min(sim.speeds.length - 1, i + 1)]; $("speed").textContent = sim.speed + "x"; };
+$("b-spawn").onclick = () => { if (!scene) return; const role = $("role-sel").value; const a = spawn(role); note(`Ny ${ROLES[role].name.toLowerCase()}: ${a.name}`, ROLES[role].color, a.pos, 1.2); feed(`<b style="color:${ROLES[role].color}">${a.name}</b> ble med i laben.`); };
+$("b-labels").onclick = () => { fx.labels = !fx.labels; document.body.classList.toggle("hide-labels", !fx.labels); $("b-labels").classList.toggle("on", fx.labels); };
+$("b-fx").onclick = () => setFx(!fx.on);
+$("b-reset").onclick = () => scene && reset();
+$("i-close").onclick = () => select(null);
+$("i-follow").onclick = () => { follow = !follow; controls.autoRotate = false; renderInspector(); };
+$("b-botpause").onclick = async () => {
+  const s = data.state; if (!s) return;
+  try { await fetch(s.paused ? "/api/resume" : "/api/pause", { method: "POST", headers: { "content-type": "application/json", "x-sigarsjefen": "1" }, body: "{}" }); } catch {}
+  poll();
+};
+if (location.protocol === "file:" || !location.host.includes("localhost") && !location.host.includes("127.0.0.1")) $("b-classic").hidden = true;
+
+/* =========================================================================
+   10. Start og hovedløkke
+   ========================================================================= */
+setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("nb-NO", { hour12: false }); }, 1000);
+
+if (renderer) {
+  initAgentGeo();
+  buildWorld();
+  populate();
+  setFx(fx.on);
+
+  // Klikk for å velge agent
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  let downAt = null;
+  renderer.domElement.addEventListener("pointerdown", (e) => (downAt = [e.clientX, e.clientY]));
+  renderer.domElement.addEventListener("pointerup", (e) => {
+    if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+    mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(mouse, camera);
+    const hit = ray.intersectObjects(agents.map((a) => a.hit), false)[0];
+    select(hit ? hit.object.userData.agent : null);
+  });
+
+  let simTime = 0, frames = 0, fpsAcc = 0, fps = 60, lowFps = 0, screenAcc = 0;
+  const loop = () => {
+    requestAnimationFrame(loop);
+    const raw = Math.min(clock.getDelta(), 0.1);
+    const dt = sim.paused ? 0 : raw * sim.speed;
+    simTime += dt;
+
+    for (const a of agents) a.update(dt, simTime);
+    if (dt) { director.assign(); demoTick(dt); }
+    for (const f of animated) f(simTime, dt);
+    updateNotes(raw);
+
+    screenAcc += raw;
+    if (screenAcc > 0.25) { screenAcc = 0; for (const s of screens) drawScreen(s, simTime); }
+
+    if (follow && selected) { controls.target.lerp(selected.pos, 0.08); }
+    controls.update();
+    if (fx.on) composer.render(); else renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+
+    frames++; fpsAcc += raw;
+    if (fpsAcc >= 1) {
+      fps = frames / fpsAcc; frames = 0; fpsAcc = 0;
+      renderStats(fps);
+      // Automatisk lavere kvalitet hvis maskinen sliter
+      lowFps = fps < 28 ? lowFps + 1 : 0;
+      if (lowFps >= 4 && fx.on) { setFx(false); feed("<b class='warn'>Effekter slått av</b> for å holde farten oppe."); }
+    }
+  };
+  loop();
+  setTimeout(() => ($("loading").style.opacity = 0), 400);
+}
+
+renderHud();
+poll();
+setInterval(poll, 2000);
+window.__lab = { agents, queue, stats, data, sim };
+</script>
+</body>
+</html>

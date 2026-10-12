@@ -61,9 +61,11 @@ npm start
 
 Boten venter 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`. Stopper du boten, blir åpne posisjoner liggende i walleten og sjekkes igjen neste gang den starter.
 
-## Dashboard
+## 3D-lab og dashboard
 
-Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du:
+Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du en 3D-lab der små agenter representerer delene av boten: skanneren, sikkerhetssjekken, risiko, trading og drift. De går til stasjonene sine og jobber når boten faktisk gjør noe: skanner nye tokens, avviser en rug, kjøper eller selger. Resultatet øverst til venstre er botens ekte tall (simulert i DRY RUN). Du kan rotere og zoome med musen, klikke på en agent for å se hva den gjør, og pause, endre fart eller legge til agenter i laben. Laben virker uten internett, siden 3D-biblioteket (three.js, MIT-lisens) ligger i `src/web/vendor`.
+
+**Klassisk visning** (knappen nederst, eller http://localhost:3000/klassisk) viser:
 
 - saldo over tid, gevinst/tap og treffprosent
 - åpne posisjoner med verdi og PnL, og en **Selg**-knapp for hver
