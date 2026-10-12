@@ -61,9 +61,19 @@ npm start
 
 Boten venter 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`. Stopper du boten, blir åpne posisjoner liggende i walleten og sjekkes igjen neste gang den starter.
 
-## 3D-lab og dashboard
+## AI HQ og dashboard
 
-Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du en 3D-lab der små agenter representerer delene av boten: skanneren, sikkerhetssjekken, risiko, trading og drift. De går til stasjonene sine og jobber når boten faktisk gjør noe: skanner nye tokens, avviser en rug, kjøper eller selger. Resultatet øverst til venstre er botens ekte tall (simulert i DRY RUN). Du kan rotere og zoome med musen, klikke på en agent for å se hva den gjør, og pause, endre fart eller legge til agenter i laben. Laben virker uten internett, siden 3D-biblioteket (three.js, MIT-lisens) ligger i `src/web/vendor`.
+Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du et 3D-penthouse på toppen av en skyskraper på Manhattan, med New York-skylinen bak panoramavinduene. Agenter i dress jobber i rommet mens penger regner fra taket:
+
+- **innsamlere** plukker opp sedler og bunter og leverer dem via tellemaskinene til hvelvet
+- **tellere** kjører tellemaskinene og sender bunter videre på båndet
+- **hvelvarbeidere** triller traller til hvelvet og stabler på hyllene
+- **tradere** og **analytikere** jobber ved terminaler og research-pulter og deler funn
+- **strategisjefer** og **direktører** inspiserer, holder møter og tildeler oppgaver
+
+Alle beløp i rommet er **simulert demodata**, ikke ekte penger. Botens ekte resultat (simulert med ekte priser i DRY RUN) vises separat øverst, i både SOL og dollar. Når boten kjøper og selger, vises det av traderne.
+
+Du kan rotere og zoome med musen, klikke på en agent for å se oppgaven og historikken, og styre fart, pengeregn, nye agenter, nye pengehauger, filmmodus (tast H) og effekter. Siden virker uten internett, siden 3D-biblioteket (three.js, MIT-lisens) ligger i `src/web/vendor`. Har PC-en svak grafikk, slår siden av effektene automatisk. Du kan også åpne http://localhost:3000/?lite.
 
 **Klassisk visning** (knappen nederst, eller http://localhost:3000/klassisk) viser:
 

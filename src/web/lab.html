@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sigarsjefen · Pengerommet</title>
+<title>Sigarsjefen · AI HQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script type="importmap">
@@ -72,16 +72,16 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 #feedlist span b{font-weight:500}
 @keyframes fin{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
-#agentstat{right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));width:262px}
-.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center}
+#agentstat{right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));width:310px}
+.sgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center}
 .sgrid b{display:block;font-family:var(--display);font-size:19px;font-weight:700}
-.sgrid i{font-style:normal;color:var(--faint);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase}
+.sgrid i{font-style:normal;color:var(--faint);font-size:8px;letter-spacing:.02em;text-transform:uppercase}
 .roles{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;border-top:1px solid var(--line);padding-top:7px;font-size:10px;color:var(--dim)}
 .roles span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c);margin-right:5px;vertical-align:0}
 .perf{margin-top:6px;color:var(--faint);font-size:10px}
 
-#controls{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;padding:7px 10px}
-.btn{background:rgba(232,192,106,.04);border:1px solid var(--line-hi);padding:6px 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg)}
+#controls{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;padding:7px 10px}
+.btn{background:rgba(232,192,106,.04);border:1px solid var(--line-hi);padding:6px 9px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--fg)}
 .btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(232,192,106,.1)}
 .btn.on{border-color:var(--gold);color:var(--gold)}
 .btn.hot{border-color:var(--warn);color:var(--warn)}
@@ -98,6 +98,9 @@ a.btn{text-decoration:none}
 .ins-name{font-family:var(--display);font-size:18px;font-weight:700}
 .ins-role{color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
 .ins-actions{display:flex;gap:6px;margin-top:10px}
+.hist{list-style:none;margin:0;padding:0;font-size:10.5px;color:var(--dim);display:flex;flex-direction:column;gap:2px;max-height:120px;overflow:auto}
+.hist time{color:var(--faint);margin-right:6px}
+.clock small{font-family:var(--mono)}
 
 body.ui-hidden .dash{display:none!important}
 
@@ -111,6 +114,7 @@ body.ui-hidden .dash{display:none!important}
 .tag3d.quiet *{display:none}
 .room3d{font-family:var(--serif);font-size:16px;font-weight:600;font-style:italic;letter-spacing:.08em;color:var(--gold);text-shadow:0 0 14px rgba(232,192,106,.6),0 1px 2px #000;opacity:.92;white-space:nowrap}
 .note3d{font-family:var(--display);font-size:12px;font-weight:700;padding:4px 9px;border:1px solid var(--c);background:rgba(10,8,5,.86);color:var(--c);white-space:nowrap;box-shadow:0 0 16px color-mix(in srgb,var(--c) 50%,transparent)}
+.room3d.city3d{font-size:13px;color:#cfe0ff;text-shadow:0 0 10px rgba(120,170,255,.7),0 1px 2px #000;opacity:.8}
 .hide-labels .tag3d,.hide-labels .room3d{display:none}
 
 #fallback{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -143,12 +147,12 @@ body.ui-hidden .dash{display:none!important}
 <div id="loading">Åpner hvelvet…</div>
 
 <header id="top" class="panel">
-  <div class="brand">Sigarsjefen <b>Pengerommet</b></div>
+  <div class="brand">Sigarsjefen <b>AI HQ</b> <small class="lbl">· Manhattan</small></div>
   <span class="pill demo">Simulert demo</span>
   <span class="pill off" id="botpill">Ekte bot: kobler til…</span>
   <div class="kv" id="botres"></div>
   <div class="grow"></div>
-  <div class="clock" id="clock">--:--:--</div>
+  <div class="clock" title="Simulert tid i New York. 1 sekund = 1 minutt ved 1x fart."><small class="lbl">New York · simulert</small> <span id="clock">18:30</span></div>
 </header>
 
 <section id="wealth" class="panel dash" aria-label="Total formue">
@@ -159,6 +163,8 @@ body.ui-hidden .dash{display:none!important}
     <dt>I hvelvet</dt><dd id="w-vault" class="gold">–</dd>
     <dt>Pengefjellet</dt><dd id="w-mountain">–</dd>
     <dt>På gulvet og i omløp</dt><dd id="w-float">–</dd>
+    <dt>Endring siste 24 t</dt><dd id="w-24">–</dd>
+    <dt>Fullførte oppgaver</dt><dd id="w-tasks">0</dd>
   </dl>
   <canvas id="w-spark" width="476" height="84" aria-hidden="true"></canvas>
   <span class="tag">Demotall fra simuleringen. Ikke ekte penger, og ikke botens resultat.</span>
@@ -170,7 +176,7 @@ body.ui-hidden .dash{display:none!important}
     <div><i>Samlet inn</i><b id="f-col">$0</b></div>
     <div><i>Satt i hvelvet</i><b id="f-dep" class="gold">$0</b></div>
     <div><i>Talt opp</i><b id="f-proc">$0</b></div>
-    <div><i>Netto per min</i><b id="f-net" class="up">$0</b></div>
+    <div><i>Netto per time</i><b id="f-net" class="up">$0</b></div>
   </div>
   <div class="fline" id="f-line">–</div>
 </section>
@@ -184,6 +190,8 @@ body.ui-hidden .dash{display:none!important}
     <dt>Fullført</dt><dd id="i-done">–</dd>
     <dt>Fart</dt><dd id="i-speed">–</dd>
   </dl>
+  <div class="ph" style="margin:9px 0 4px">Historikk</div>
+  <ol class="hist" id="i-hist"></ol>
   <div class="ins-actions">
     <button class="btn" id="i-follow" type="button">Følg med kamera</button>
     <button class="btn" id="i-close" type="button">Lukk</button>
@@ -202,6 +210,7 @@ body.ui-hidden .dash{display:none!important}
     <div><b id="a-work" class="gold">0</b><i>Jobber</i></div>
     <div><b id="a-col">0</b><i>Samler</i></div>
     <div><b id="a-tr" class="blue">0</b><i>Frakter</i></div>
+    <div><b id="a-res" style="color:#2dd4bf">0</b><i>Analyserer</i></div>
     <div><b id="a-idle" class="muted">0</b><i>Ledig</i></div>
   </div>
   <div class="roles" id="a-roles"></div>
@@ -222,11 +231,11 @@ body.ui-hidden .dash{display:none!important}
   <span class="sep"></span>
   <select id="role-sel" aria-label="Type agent"></select>
   <button class="btn" id="b-spawn" type="button">Ny agent</button>
-  <button class="btn" id="b-pile" type="button">Ny pengehaug</button>
+  <button class="btn" id="b-pile" type="button" title="Legger en haug med simulerte bunter på gulvet">Legg til penger</button>
   <span class="sep"></span>
-  <button class="btn on" id="b-ui" type="button">Skjul UI</button>
+  <button class="btn" id="b-ui" type="button" title="Skjuler panelene og lar kameraet gli rolig rundt (tast H)">Filmmodus</button>
   <button class="btn on" id="b-labels" type="button">Etiketter</button>
-  <button class="btn on" id="b-fx" type="button">Filmlys</button>
+  <button class="btn on" id="b-fx" type="button">Effekter</button>
   <button class="btn" id="b-reset" type="button">Nullstill</button>
   <span class="sep"></span>
   <button class="btn" id="b-botpause" type="button" hidden>Pause kjøp</button>
@@ -254,16 +263,19 @@ const ROLES = {
   collector: { name: "Innsamler",     desc: "Samler sedler og leverer til hvelvet", color: "#fbbf24", speed: [1.5, 1.9] },
   counter:   { name: "Teller",        desc: "Kjører tellemaskinene",                color: "#34d399", speed: [1.2, 1.5] },
   trader:    { name: "Trader",        desc: "Analyserer markedet ved terminalene",  color: "#60a5fa", speed: [1.3, 1.7] },
-  manager:   { name: "Sjef",          desc: "Inspiserer og koordinerer",            color: "#c084fc", speed: [1.0, 1.3] },
+  manager:   { name: "Strategisjef",  desc: "Inspiserer, tildeler oppgaver og tar imot rapporter", color: "#c084fc", speed: [1.0, 1.3] },
   vault:     { name: "Hvelvarbeider", desc: "Frakter traller til hvelvet",          color: "#fb923c", speed: [1.2, 1.5] },
+  researcher:{ name: "Analytiker",    desc: "Studerer data og deler funn",          color: "#2dd4bf", speed: [1.2, 1.6] },
+  executive: { name: "Direktør",      desc: "Går runder med koffert og leder driften", color: "#f9a8d4", speed: [0.9, 1.2] },
 };
 const ROLE_KEYS = Object.keys(ROLES);
 const NAMES = ["Harald","Viktor","Ingrid","Magnus","Sofie","Leon","Astrid","Oskar","Nora","Henrik","Thea","Emil","Selma","Johan","Frida","Aksel","Maja","Sander","Iben","Jonas","Vilde","Mathias","Live","Kasper","Ella","Tobias","Ada","Filip","Mia","Even"];
-const STATE_TEXT = { idle: "Ledig", walking: "Går", working: "Jobber", communicating: "Snakker", celebrating: "Feirer" };
+const STATE_TEXT = { idle: "Ledig", walking: "Går", working: "Jobber", communicating: "Kommuniserer", celebrating: "Feirer" };
+const ACT_TEXT = { collect: "Samler inn", transport: "Frakter", research: "Analyserer", talk: "Kommuniserer", work: "Jobber", idle: "Ledig" };
 const GOLD = "#e8c06a", BLUE = "#5fb4ff";
 const NOTE = 100, BUNDLE = 10000;  // én seddel og én bunt i den simulerte økonomien
 const W = 36, H = 24;              // rutenett, 1 rute = 1 meter
-const CEIL = 9.5, RING_Y = 8.2;
+const CEIL = 7.4, RING_Y = 6.0, ROOF_Y = 6.45;
 
 const nf = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 });
 const money = (v) => "$" + nf.format(Math.round(v));
@@ -382,7 +394,10 @@ const CABINETS = [{ z0: 2, z1: 7 }, { z0: 16, z1: 21 }]; // glasshvelv langs hø
 const DESKS = [9, 13, 21, 25], DESK_Z = 19;        // trading-terminaler (2 ruter brede)
 const HOLO = [[17, 20], [18, 20]];                 // strategibord
 const CART_HOME = [[29, 4], [30, 4], [31, 4]];
-const PILE_START = [[5, 21, true], [30, 21, false], [5, 9, false], [30, 13, true], [12, 3, false], [23, 4, false]];
+const PILE_START = [[5, 21, true], [30, 21, false], [30, 13, true], [12, 3, false], [23, 4, false]];
+const CONF = { x0: 6, x1: 10, z0: 10, z1: 13 };           // konferansebord
+const RESEARCH = [[27, 8], [27, 12], [27, 16]];             // research-pulter (2 ruter langs z)
+const PLANTS = [[35, 8], [35, 15], [0, 0], [35, 23], [0, 23]];
 const ZONE_CELLS = [[1, 1], [1, 22], [33, 23], [11, 7], [24, 7], [11, 16], [24, 17], [17, 5], [3, 19], [29, 10], [19, 23]];
 
 const BELT_SPOTS = regSpots([[5, 1], [6, 1]]);
@@ -392,6 +407,8 @@ const SHELF_SPOTS = regSpots([[33, 3], [33, 4], [33, 5], [33, 6], [33, 17], [33,
 const MOUNTAIN_SPOTS = regSpots([[12, 10], [12, 13], [23, 10], [23, 13], [15, 7], [20, 7], [15, 16], [20, 16]]);
 const DESK_SPOTS = regSpots(DESKS.flatMap((x) => [[x, DESK_Z + 1], [x + 1, DESK_Z + 1]]));
 const HOLO_SPOTS = regSpots([[16, 20], [19, 20], [17, 21], [18, 21], [17, 19], [18, 19]]);
+const CONF_SPOTS = regSpots([[5, 11], [5, 12], [11, 11], [11, 12], [7, 9], [9, 9], [7, 14], [9, 14]]);
+const RESEARCH_SPOTS = regSpots(RESEARCH.flatMap(([x, z]) => [[x - 1, z], [x - 1, z + 1]]));
 
 const TABLE_C = rectC(TABLE.x0, TABLE.x1, TABLE.z0, TABLE.z1);
 const TABLE_HX = (TABLE.x1 - TABLE.x0 + 1) / 2 - 0.15, TABLE_HZ = (TABLE.z1 - TABLE.z0 + 1) / 2 - 0.15;
@@ -408,12 +425,15 @@ function buildLayout() {
   for (let x = BELT.x0; x <= BELT.x1; x++) block(x, BELT.z, 0.78);
   for (const [x, z] of DOCK_CELLS) block(x, z, 0.3);
   for (let x = TABLE.x0; x <= TABLE.x1; x++) for (let z = TABLE.z0; z <= TABLE.z1; z++) block(x, z, TT);
-  for (const [x, z] of TOWERS) for (let dx = 0; dx < 2; dx++) for (let dz = 0; dz < 2; dz++) block(x + dx, z + dz, 7.2);
+  for (const [x, z] of TOWERS) for (let dx = 0; dx < 2; dx++) for (let dz = 0; dz < 2; dz++) block(x + dx, z + dz, 6.3);
   for (const c of CABINETS) for (let z = c.z0; z <= c.z1; z++) for (const x of [34, 35]) block(x, z, 2.5);
   for (let z = 10; z <= 13; z++) block(35, z, 0);                // dørkarm
   for (const x of [32, 33, 34]) block(x, 10, 0);                 // døra svinger hit
   for (const x of DESKS) { block(x, DESK_Z, 0.8); block(x + 1, DESK_Z, 0.8); }
   for (const [x, z] of HOLO) block(x, z, 0.85);
+  for (let x = CONF.x0; x <= CONF.x1; x++) for (let z = CONF.z0; z <= CONF.z1; z++) block(x, z, 0.8);
+  for (const [x, z] of RESEARCH) { block(x, z, 0.8); block(x, z + 1, 0.8); }
+  for (const [x, z] of PLANTS) block(x, z, 1.4);
 }
 
 /* =========================================================================
@@ -458,21 +478,21 @@ if (!hasGL) {
   stage.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color("#050404");
-  scene.fog = new THREE.Fog("#050404", 48, 90);
+  scene.background = new THREE.Color("#140f1c");
+  scene.fog = new THREE.Fog("#2a1f30", 160, 1250);
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.42;
 
-  camera = new THREE.PerspectiveCamera(isMobile ? 55 : 38, innerWidth / innerHeight, 0.1, 220);
-  camera.position.set(-13, isMobile ? 34 : 25, isMobile ? 36 : 30);
+  camera = new THREE.PerspectiveCamera(isMobile ? 55 : 38, innerWidth / innerHeight, 0.5, 3200);
+  camera.position.set(-17, isMobile ? 26 : 13.5, isMobile ? 40 : 35);
 
   controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(1, 0.6, 1.2);
+  controls.target.set(1, 1.6, -2);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minDistance = 6;
-  controls.maxDistance = 70;
+  controls.maxDistance = 95;
   controls.maxPolarAngle = Math.PI * 0.46;
 
   labelRenderer = new CSS2DRenderer({ element: document.getElementById("labels") });
@@ -654,6 +674,7 @@ function addLabel(text, pos) {
   const el = document.createElement("div");
   el.className = "room3d"; el.textContent = text;
   const o = new CSS2DObject(el); o.position.copy(pos); scene.add(o);
+  return o;
 }
 
 function buildRoom() {
@@ -669,37 +690,21 @@ function buildRoom() {
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2; floor.renderOrder = -1;
   scene.add(floor);
-  const base = new THREE.Mesh(new THREE.PlaneGeometry(W + 30, H + 30), M.black);
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(W + 1.2, H + 1.2), M.black);
   base.rotation.x = -Math.PI / 2; base.position.y = -0.03; scene.add(base);
 
-  // Vegger: høye bak og til høyre, lave foran og til venstre så kameraet ser inn
-  const WH = 6.2, hx = W / 2, hz = H / 2;
-  const wall = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M.wall); m.position.set(x, y, z); scene.add(m); return m; };
-  wall(W + 0.8, WH, 0.4, 0, WH / 2, -hz - 0.2);
-  wall(0.4, WH, H + 0.8, hx + 0.2, WH / 2, 0);
-  wall(0.3, 0.55, H + 0.6, -hx - 0.15, 0.275, 0);
-  wall(W + 0.6, 0.55, 0.3, 0, 0.275, hz + 0.15);
-  const trim = (w, h, d, x, y, z, m = M.gold) => { const t = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); t.position.set(x, y, z); scene.add(t); return t; };
-  for (const y of [0.18, 3.05, WH - 0.15]) { trim(W + 0.8, y === 3.05 ? 0.04 : 0.1, 0.06, 0, y, -hz + 0.03); trim(0.06, y === 3.05 ? 0.04 : 0.1, H + 0.8, hx - 0.03, y, 0); }
-  trim(0.36, 0.06, H + 0.6, -hx - 0.15, 0.58, 0); trim(W + 0.6, 0.06, 0.36, 0, 0.58, hz + 0.15);
-  // Søyler, lamper og paneler
-  const sconces = [];
-  for (let x = -hx + 2; x <= hx - 1; x += 4) { trim(0.3, WH, 0.12, x, WH / 2, -hz + 0.06, M.goldDark); sconces.push([x + 2, 4.3, -hz + 0.18]); }
-  for (let z = -hz + 2; z <= hz - 1; z += 4) { if (Math.abs(z - DOOR_Z) < 2.4) continue; trim(0.12, WH, 0.3, hx - 0.06, WH / 2, z, M.goldDark); sconces.push([hx - 0.18, 4.3, z + 2]); }
-  const sg = new THREE.SphereGeometry(0.09, 12, 8);
-  const sconceIM = new THREE.InstancedMesh(sg, M.lampGold, sconces.length);
-  sconces.forEach((p, i) => { dummy.position.set(...p); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1.6, 1); dummy.updateMatrix(); sconceIM.setMatrixAt(i, dummy.matrix); });
-  scene.add(sconceIM);
-  // Lys i gulvlistene
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(W, 0.03, 0.03), M.lampAmber); strip.position.set(0, 0.32, -hz + 0.05); scene.add(strip);
-  const strip2 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, H), M.lampAmber); strip2.position.set(hx - 0.05, 0.32, 0); scene.add(strip2);
+  // Panoramavinduer bak og på begge sider. Foran er det en lav brystning, så kameraet ser inn.
+  const WH = 6.2, hz = H / 2;
+  buildWindows(WH);
+  const front = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.55, 0.3), M.wall); front.position.set(0, 0.275, hz + 0.15); scene.add(front);
+  const frontT = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.06, 0.36), M.gold); frontT.position.set(0, 0.58, hz + 0.15); scene.add(frontT);
 
   // Hengelamper
-  const shade = new THREE.ConeGeometry(0.35, 0.3, 20, 1, true), bulb = new THREE.SphereGeometry(0.12, 12, 8), cable = new THREE.CylinderGeometry(0.01, 0.01, 6, 4);
+  const shade = new THREE.ConeGeometry(0.35, 0.3, 20, 1, true), bulb = new THREE.SphereGeometry(0.12, 12, 8), cable = new THREE.CylinderGeometry(0.01, 0.01, 0.9, 4);
   for (const [x, z] of [[-11, -6], [-11, 6], [11, -6], [11, 6], [0, -9], [0, 9.5]]) {
-    const s = new THREE.Mesh(shade, M.gold); s.position.set(x, 6.4, z); scene.add(s);
-    const b = new THREE.Mesh(bulb, M.lampGold); b.position.set(x, 6.25, z); scene.add(b);
-    const c = new THREE.Mesh(cable, M.metal); c.position.set(x, 9.5, z); scene.add(c);
+    const s = new THREE.Mesh(shade, M.gold); s.position.set(x, 5.6, z); scene.add(s);
+    const b = new THREE.Mesh(bulb, M.lampGold); b.position.set(x, 5.45, z); scene.add(b);
+    const c = new THREE.Mesh(cable, M.metal); c.position.set(x, 6.0, z); scene.add(c);
   }
 
   // Lys
@@ -709,7 +714,10 @@ function buildRoom() {
   pl("#5fb4ff", 18, 14, 0, 3, 8.5);
   pl("#ffd27a", 16, 13, -14.5, 3.5, -2);
   pl("#ffb347", 12, 14, 6, 3.5, -9.5);
+  const cityLight = new THREE.DirectionalLight("#7f9cff", 0.45); cityLight.position.set(0, 8, -40); scene.add(cityLight);
 
+  buildSky();
+  buildCity();
   buildMachines();
   buildBelt();
   buildTable();
@@ -720,12 +728,228 @@ function buildRoom() {
   buildZones();
   buildHolos();
   buildParticles();
+  buildDecor();
 
   addLabel("Tellemaskiner", new THREE.Vector3(-15.8, 2.6, -1.5));
   addLabel("Hvelvet", new THREE.Vector3(DOOR_X - 0.4, 4.4, DOOR_Z));
   addLabel("Trading", new THREE.Vector3(0, 2.6, 7.3));
   addLabel("Transportbånd", new THREE.Vector3(-6, 1.7, -11.4));
   addLabel("Lasterampe", new THREE.Vector3(DOCK_C.x, 1.6, DOCK_C.z));
+}
+
+
+/* --- Glassvegger med gullsprosser --- */
+function buildWindows(WH) {
+  const hx = W / 2, hz = H / 2;
+  M.window = new THREE.MeshStandardMaterial({ color: "#a9c1dc", metalness: 0.9, roughness: 0.04, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide });
+  const pane = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, WH), M.window); m.position.set(x, WH / 2, z); m.rotation.y = ry; m.renderOrder = 2; scene.add(m); };
+  const vz0 = DOOR_Z - 3, vz1 = DOOR_Z + 3; // massiv hvelvvegg rundt døra
+  pane(W, 0, -hz, 0);
+  pane(H, -hx, 0, Math.PI / 2);
+  pane(vz0 + hz, hx, (-hz + vz0) / 2, -Math.PI / 2);
+  pane(hz - vz1, hx, (vz1 + hz) / 2, -Math.PI / 2);
+  const vw = new THREE.Mesh(new THREE.BoxGeometry(0.5, WH, vz1 - vz0), M.wall); vw.position.set(hx + 0.25, WH / 2, DOOR_Z); scene.add(vw);
+  for (const z of [vz0, vz1]) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.56, WH, 0.12), M.gold); t.position.set(hx + 0.25, WH / 2, z); scene.add(t); }
+  const vt = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.12, vz1 - vz0), M.gold); vt.position.set(hx + 0.25, WH - 0.06, DOOR_Z); scene.add(vt);
+  // sprosser, karm og sokkel (instansert)
+  const mull = [], beams = [];
+  for (let x = -hx; x <= hx + 0.01; x += 3) mull.push([x, -hz]);
+  for (let z = -hz + 3; z <= hz + 0.01; z += 3) { mull.push([-hx, z]); if (z < vz0 - 0.1 || z > vz1 + 0.1) mull.push([hx, z]); }
+  const mg = new THREE.BoxGeometry(0.12, WH, 0.12), mIM = new THREE.InstancedMesh(mg, M.goldDark, mull.length);
+  const lg = new THREE.SphereGeometry(0.07, 8, 6), lIM = new THREE.InstancedMesh(lg, M.lampGold, mull.length);
+  mull.forEach(([x, z], i) => { dummy.position.set(x, WH / 2, z); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(1); dummy.updateMatrix(); mIM.setMatrixAt(i, dummy.matrix); dummy.position.set(x + (x === hx ? -0.12 : x === -hx ? 0.12 : 0), 0.32, z + (z === -hz ? 0.12 : 0)); dummy.updateMatrix(); lIM.setMatrixAt(i, dummy.matrix); });
+  scene.add(mIM, lIM);
+  const beam = (w, d, x, z) => {
+    const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.3, d), M.metal); top.position.set(x, WH + 0.15, z); scene.add(top);
+    const tg = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.05, d + 0.02), M.gold); tg.position.set(x, WH - 0.02, z); scene.add(tg);
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(w, 0.22, d), M.black); sill.position.set(x, 0.11, z); scene.add(sill);
+    const sg = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.03, d + 0.02), M.gold); sg.position.set(x, 0.23, z); scene.add(sg);
+  };
+  beam(W + 0.3, 0.3, 0, -hz); beam(0.3, H + 0.3, -hx, 0); beam(0.3, H + 0.3, hx, 0);
+  // Glasstak: tynne bjelker som ringen og lampene henger i
+  const rb = [];
+  for (let x = -hx + 6; x < hx; x += 6) rb.push([x, 0, 0.1, H]);
+  for (let z = -hz + 6; z < hz; z += 6) rb.push([0, z, W, 0.1]);
+  for (const [x, z, w, d] of rb) { const r = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), M.goldDark); r.position.set(x, ROOF_Y, z); scene.add(r); }
+  const roofRing = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.08, 8, 64), M.goldDark); roofRing.rotation.x = Math.PI / 2; roofRing.position.set(TABLE_C.x, ROOF_Y, TABLE_C.z); scene.add(roofRing);
+  // tårnet vi står i: fasaden under gulvet
+  const ft = canvasTex(256, 256, (x, w, h) => { x.fillStyle = "#07090e"; x.fillRect(0, 0, w, h); for (let r = 0; r < 32; r++) for (let c = 0; c < 16; c++) { x.fillStyle = Math.random() < 0.25 ? "#e9c58a" : "#10141c"; x.fillRect(c * 16 + 2, r * 8 + 2, 12, 5); } });
+  ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(4, 14);
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(W + 1.4, -GY, H + 1.4), new THREE.MeshStandardMaterial({ map: ft, emissive: "#ffffff", emissiveMap: ft, emissiveIntensity: 0.3, metalness: 0.7, roughness: 0.3 }));
+  tower.position.set(0, GY / 2 - 0.25, 0); scene.add(tower);
+  const ledge = new THREE.Mesh(new THREE.BoxGeometry(W + 1.6, 0.2, H + 1.6), M.gold); ledge.position.set(0, -0.15, 0); scene.add(ledge);
+}
+
+/* --- Himmel i skumring med stjerner --- */
+function buildSky() {
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(2600, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color("#060a1a") }, mid: { value: new THREE.Color("#221a40") }, hor: { value: new THREE.Color("#b8683e") }, low: { value: new THREE.Color("#2a1f30") } },
+    vertexShader: "varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform vec3 top, mid, hor, low; varying vec3 vP;
+      void main(){ float y = vP.y; vec3 c = y > 0.0 ? mix(mix(hor, mid, smoothstep(0.0, 0.045, y)), top, smoothstep(0.045, 0.5, y)) : mix(hor, low, smoothstep(0.0, -0.025, y));
+      gl_FragColor = vec4(c, 1.0);
+      #include <colorspace_fragment>
+      }`,
+  }));
+  sky.renderOrder = -10; scene.add(sky);
+  const n = 500, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const a = rand(0, 6.283), e = rand(0.12, 1.3); pos[i * 3] = Math.cos(a) * Math.cos(e) * 2400; pos[i * 3 + 1] = Math.sin(e) * 2400; pos[i * 3 + 2] = Math.sin(a) * Math.cos(e) * 2400; }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: "#dfe6ff", size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.8, depthWrite: false })));
+}
+
+/* --- New York: Manhattan, elvene, Empire State, One WTC, Brooklyn Bridge og trafikk --- */
+const GY = -120; // bakkenivå i byen (vi er på toppen av et tårn)
+const LANDMARK = { esb: [22, -360], wtc: [62, -112] };
+const city = { cars: null };
+function facadeTexture() {
+  return canvasTex(128, 256, (x, w, h) => {
+    x.fillStyle = "#0b0d13"; x.fillRect(0, 0, w, h);
+    x.fillStyle = "#1c1f27"; x.fillRect(0, 0, w, 8);
+    const cols = 8, rows = 30, cwid = w / cols, rh = (h - 8) / rows;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const v = Math.random();
+      x.fillStyle = v < 0.3 ? pick(["#ffd9a0", "#ffe6c2", "#f6c27a"]) : v < 0.37 ? "#bcd7ff" : "#141823";
+      x.fillRect(c * cwid + 2, 8 + r * rh + 2, cwid - 4, rh - 3);
+    }
+  });
+}
+function buildCity() {
+  const facade = facadeTexture();
+  const unit = new THREE.BoxGeometry(1, 1, 1); unit.translate(0, 0.5, 0);
+  const uv = unit.attributes.uv; for (let i = 8; i < 16; i++) uv.setXY(i, 0.5, 0.985); uv.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({ map: facade, color: "#9096a4", roughness: 0.5, metalness: 0.5, emissive: "#ffffff", emissiveMap: facade, emissiveIntensity: 0.75 });
+  city.unit = unit; city.mat = mat;
+  const list = [];
+  const near = (x, z, [lx, lz], r) => (x - lx) ** 2 + (z - lz) ** 2 < r * r;
+  const dense = (x, z) => 1 + 1.9 * Math.exp(-((x - 62) ** 2 + (z + 112) ** 2) / 9000) + 1.6 * Math.exp(-((x - 22) ** 2 + (z + 360) ** 2) / 16000);
+  const zStep = isMobile ? 20 : 10;
+  for (let ax = -200; ax < 140; ax += 20) for (let sz = -900; sz < 140; sz += zStep) {
+    if (ax > -70 && ax < 40 && sz > -770 && sz < -560) continue;            // Central Park
+    if (ax > -50 && ax < 30 && sz > -40 && sz < 30) continue;               // tårnet vårt
+    const parts = Math.random() < 0.55 ? 1 : 2, bw = 17 / parts;
+    for (let k = 0; k < parts; k++) {
+      const cx = ax + 2 + bw * k + bw / 2, cz = sz + 5.3;
+      if (near(cx, cz, LANDMARK.esb, 20) || near(cx, cz, LANDMARK.wtc, 16)) continue;
+      const h = Math.min(74, (7 + Math.random() ** 2 * 24) * dense(cx, cz));
+      list.push([cx, cz, bw - rand(0.8, 2.2), rand(5.5, 8), h]);
+    }
+  }
+  for (const [x0, x1] of [[-560, -320], [240, 560]]) for (let ax = x0; ax < x1; ax += 20) for (let sz = -900; sz < 140; sz += zStep * 2) {
+    if (Math.random() < 0.35) continue;
+    list.push([ax + 10, sz + 10, rand(8, 15), rand(8, 15), rand(4, 16) * (Math.abs(ax) < 360 ? 1.4 : 1)]);
+  }
+  const im = new THREE.InstancedMesh(unit, mat, list.length), col = new THREE.Color();
+  const tops = [];
+  list.forEach(([x, z, w, d, h], i) => {
+    dummy.position.set(x, GY, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(w, h, d); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix);
+    im.setColorAt(i, col.setHSL(rand(0.55, 0.65), rand(0.05, 0.2), rand(0.35, 0.6)));
+    if (h > 46) tops.push(x, GY + h + 0.6, z);
+  });
+  im.computeBoundingSphere();
+  scene.add(im);
+  // bakke med gater og gatelys
+  const gt = canvasTex(128, 128, (x, w, h) => {
+    x.fillStyle = "#06070a"; x.fillRect(0, 0, w, h);
+    x.fillStyle = "#15161b"; x.fillRect(0, 0, 10, h); x.fillRect(0, 0, w, 6); x.fillRect(0, 64, w, 6);
+    x.fillStyle = "#ffcf7a"; for (let i = 0; i < h; i += 8) { x.fillRect(1, i, 2, 2); x.fillRect(7, i + 4, 2, 2); } for (let i = 0; i < w; i += 8) { x.fillRect(i, 1, 2, 2); x.fillRect(i + 4, 65, 2, 2); }
+  });
+  gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(80, 80);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshStandardMaterial({ map: gt, emissive: "#ffffff", emissiveMap: gt, emissiveIntensity: 1.1, roughness: 0.95 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(0, GY, -380); scene.add(ground);
+  const water = new THREE.MeshStandardMaterial({ color: "#0b1828", metalness: 0.9, roughness: 0.2, emissive: "#0d1d33", emissiveIntensity: 0.7 });
+  for (const [x0, x1] of [[-320, -200], [140, 240]]) { const r = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, 1600), water); r.rotation.x = -Math.PI / 2; r.position.set((x0 + x1) / 2, GY + 0.25, -380); scene.add(r); }
+  const bay = new THREE.Mesh(new THREE.PlaneGeometry(1600, 500), water); bay.rotation.x = -Math.PI / 2; bay.position.set(0, GY + 0.22, 400); scene.add(bay);
+  const park = new THREE.Mesh(new THREE.PlaneGeometry(110, 210), new THREE.MeshStandardMaterial({ color: "#0d1d12", emissive: "#0a1a0e", emissiveIntensity: 0.6, roughness: 1 }));
+  park.rotation.x = -Math.PI / 2; park.position.set(-15, GY + 0.2, -665); scene.add(park);
+  buildESB(...LANDMARK.esb);
+  buildWTC(...LANDMARK.wtc);
+  buildBridge();
+  // røde flylys på høye tak
+  for (const p of [[LANDMARK.esb[0], GY + 90, LANDMARK.esb[1]], [LANDMARK.wtc[0], GY + 117, LANDMARK.wtc[1]]]) tops.push(...p);
+  const ag = new THREE.BufferGeometry(); ag.setAttribute("position", new THREE.BufferAttribute(new Float32Array(tops), 3));
+  const aMat = new THREE.PointsMaterial({ map: TEX.glow, color: "#ff3b3b", size: 3, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  scene.add(new THREE.Points(ag, aMat));
+  animated.push((t) => { aMat.opacity = 0.35 + 0.65 * (Math.sin(t * 2.6) > 0.4 ? 1 : 0.2); });
+  buildTraffic();
+}
+function buildESB(x, z) {
+  let y = GY;
+  for (const [w, h, d, lit] of [[26, 9, 20], [21, 13, 16], [15, 40, 12], [11, 6, 9, 1], [8, 5, 7, 1]]) {
+    const m = new THREE.Mesh(city.unit, lit ? emissive("#ffd27a", 1.4) : city.mat); m.scale.set(w, h, d); m.position.set(x, y, z); scene.add(m); y += h;
+  }
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.9, 7, 12), emissive("#fff1d0", 1.3)); mast.position.set(x, y + 3.5, z); scene.add(mast); y += 7;
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.5, 12, 8), M.steel); spire.position.set(x, y + 6, z); scene.add(spire);
+  addLabel("Empire State Building", new THREE.Vector3(x, y + 16, z)).element.classList.add("city3d");
+}
+function buildWTC(x, z) {
+  const pod = new THREE.Mesh(city.unit, M.metal); pod.scale.set(19, 12, 19); pod.position.set(x, GY, z); scene.add(pod);
+  const H0 = GY + 12, Ht = 82, rb = 11.3, rt = 7.6, B = [], T = [];
+  for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + (i * Math.PI) / 2; B.push([x + Math.cos(a) * rb, H0, z + Math.sin(a) * rb]); const b = (i * Math.PI) / 2; T.push([x + Math.cos(b) * rt, H0 + Ht, z + Math.sin(b) * rt]); }
+  const v = [];
+  for (let i = 0; i < 4; i++) { const n = (i + 1) % 4; v.push(...B[i], ...B[n], ...T[n]); v.push(...B[i], ...T[n], ...T[i]); }
+  v.push(...T[0], ...T[1], ...T[2], ...T[0], ...T[2], ...T[3]);
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals();
+  const glass = new THREE.MeshStandardMaterial({ color: "#7fa3cf", metalness: 0.95, roughness: 0.12, emissive: "#2a4466", emissiveIntensity: 1.0, side: THREE.DoubleSide, flatShading: true });
+  scene.add(new THREE.Mesh(g, glass));
+  const ring = new THREE.Mesh(new THREE.BoxGeometry(11, 1.2, 11), emissive("#cfe3ff", 1.4)); ring.position.set(x, H0 + Ht + 0.6, z); ring.rotation.y = Math.PI / 4; scene.add(ring);
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.7, 22, 8), M.steel); spire.position.set(x, H0 + Ht + 12, z); scene.add(spire);
+  addLabel("One World Trade Center", new THREE.Vector3(x, H0 + Ht + 28, z)).element.classList.add("city3d");
+}
+function buildBridge() {
+  const z = -205, deckY = GY + 12, x0 = 126, x1 = 254, t1 = 166, t2 = 214, top = GY + 36;
+  const stone = new THREE.MeshStandardMaterial({ color: "#8a7760", roughness: 0.85, emissive: "#5a3c1c", emissiveIntensity: 0.55 });
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 1.4, 7), M.metal); deck.position.set((x0 + x1) / 2, deckY, z); scene.add(deck);
+  for (const tx of [t1, t2]) {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(6, 14, 9.5), stone); base.position.set(tx, GY + 7, z); scene.add(base);
+    for (const dz of [-3.9, 0, 3.9]) { const p = new THREE.Mesh(new THREE.BoxGeometry(5.4, 16, 1.7), stone); p.position.set(tx, GY + 22, z + dz); scene.add(p); }
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 9.5), stone); cap.position.set(tx, GY + 33, z); scene.add(cap);
+  }
+  const cable = [], sus = [], lights = [];
+  const yAt = (x) => x < t1 ? deckY + 1 + (top - deckY - 1) * ((x - x0) / (t1 - x0)) ** 1.6 : x > t2 ? deckY + 1 + (top - deckY - 1) * ((x1 - x) / (x1 - t2)) ** 1.6 : top - (top - deckY - 3) * (1 - ((x - (t1 + t2) / 2) / ((t2 - t1) / 2)) ** 2);
+  for (const dz of [-3.2, 3.2]) {
+    for (let x = x0; x < x1; x += 2) cable.push(x, yAt(x), z + dz, x + 2, yAt(x + 2), z + dz);
+    for (let x = x0 + 4; x < x1; x += 4) { if (Math.abs(x - t1) < 3 || Math.abs(x - t2) < 3) continue; sus.push(x, yAt(x), z + dz, x, deckY + 0.7, z + dz); }
+    for (let x = x0; x <= x1; x += 4) lights.push(x, deckY + 1, z + dz);
+  }
+  const lm = new THREE.LineBasicMaterial({ color: "#ffe2a8", toneMapped: false, transparent: true, opacity: 0.95 });
+  const cg = new THREE.BufferGeometry(); cg.setAttribute("position", new THREE.Float32BufferAttribute(cable, 3)); scene.add(new THREE.LineSegments(cg, lm));
+  const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.Float32BufferAttribute(sus, 3)); scene.add(new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ color: "#c9b48a", transparent: true, opacity: 0.55 })));
+  const lg = new THREE.BufferGeometry(); lg.setAttribute("position", new THREE.Float32BufferAttribute(lights, 3));
+  scene.add(new THREE.Points(lg, new THREE.PointsMaterial({ map: TEX.glow, color: "#ffd890", size: 2.2, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
+  addLabel("Brooklyn Bridge", new THREE.Vector3((t1 + t2) / 2, top + 10, z)).element.classList.add("city3d");
+}
+function buildTraffic() {
+  const N = isMobile ? 300 : 900, cars = [];
+  for (let i = 0; i < N; i++) {
+    const ave = Math.random() < 0.6, dir = Math.random() < 0.5 ? 1 : -1;
+    if (ave) cars.push({ ave, dir, c: Math.floor(rand(0, 17)) * 20 - 200 + 0.8 + dir * 0.3, p: rand(-900, 140), v: rand(6, 14) * dir });
+    else cars.push({ ave, dir, c: Math.floor(rand(-90, 14)) * 10 + 0.47 + dir * 0.2, p: rand(-200, 140), v: rand(5, 12) * dir });
+  }
+  const mk = (color) => { const pos = new Float32Array(N * 3); const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); const pts = new THREE.Points(g, new THREE.PointsMaterial({ map: TEX.glow, color, size: 1.6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); pts.frustumCulled = false; scene.add(pts); return { pos, g }; };
+  const head = mk("#fff4dc"), tail = mk("#ff4a3a");
+  // båter på elvene
+  const boats = [];
+  for (let i = 0; i < 14; i++) boats.push({ x: Math.random() < 0.5 ? rand(-300, -220) : rand(155, 225), p: rand(-900, 300), v: rand(-4, 4) || 2 });
+  const bp = new Float32Array(boats.length * 3), bg = new THREE.BufferGeometry(); bg.setAttribute("position", new THREE.BufferAttribute(bp, 3));
+  const bpts = new THREE.Points(bg, new THREE.PointsMaterial({ map: TEX.glow, color: "#9fd0ff", size: 2.4, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); bpts.frustumCulled = false; scene.add(bpts);
+  animated.push((t, dt) => {
+    for (let i = 0; i < N; i++) {
+      const c = cars[i];
+      c.p += c.v * dt;
+      const lo = c.ave ? -900 : -200, hi = 140;
+      if (c.p > hi) c.p = lo; else if (c.p < lo) c.p = hi;
+      const x = c.ave ? c.c : c.p, z = c.ave ? c.p : c.c;
+      const towards = c.ave ? c.dir > 0 : c.dir < 0; // kjører mot kameraet: frontlys
+      const a = towards ? head : tail, b = towards ? tail : head;
+      a.pos[i * 3] = x; a.pos[i * 3 + 1] = GY + 0.6; a.pos[i * 3 + 2] = z;
+      b.pos[i * 3 + 1] = -9999;
+    }
+    head.g.attributes.position.needsUpdate = true; tail.g.attributes.position.needsUpdate = true;
+    boats.forEach((b, i) => { b.p += b.v * dt; if (b.p > 300) b.p = -900; if (b.p < -900) b.p = 300; bp[i * 3] = b.x; bp[i * 3 + 1] = GY + 0.8; bp[i * 3 + 2] = b.p; });
+    bg.attributes.position.needsUpdate = true;
+  });
 }
 
 /* --- Tellemaskiner --- */
@@ -860,7 +1084,7 @@ function buildTable() {
   const disc = new THREE.Mesh(new THREE.CircleGeometry(3.5, 48), new THREE.MeshBasicMaterial({ color: "#ffbf5e", transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })); disc.rotation.x = Math.PI / 2; disc.position.set(c.x, RING_Y - 0.1, c.z); scene.add(disc);
   const nozG = new THREE.SphereGeometry(0.1, 10, 8), noz = new THREE.Group(); noz.position.set(c.x, RING_Y - 0.22, c.z); scene.add(noz);
   for (let i = 0; i < 16; i++) { const n = new THREE.Mesh(nozG, M.lampGold); const a = (i / 16) * 6.283; n.position.set(Math.cos(a) * 3.1, 0, Math.sin(a) * 3.1); noz.add(n); }
-  for (let i = 0; i < 4; i++) { const a = (i / 4) * 6.283 + 0.4; const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 8, 6), M.goldDark); cab.position.set(c.x + Math.cos(a) * 3.7, RING_Y + 4, c.z + Math.sin(a) * 3.7); scene.add(cab); }
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * 6.283 + 0.4; const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, ROOF_Y - RING_Y, 6), M.goldDark); cab.position.set(c.x + Math.cos(a) * 3.7, (ROOF_Y + RING_Y) / 2, c.z + Math.sin(a) * 3.7); scene.add(cab); }
   M.beams = [];
   const cone = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 4.6, RING_Y - TT, 40, 1, true), beamMat("#ffc66d", 0.16));
   cone.position.set(c.x, (RING_Y + TT) / 2, c.z); scene.add(cone); M.beams.push(cone);
@@ -923,16 +1147,16 @@ function buildVault() {
 /* --- Glasstårn med bunter helt opp mot taket --- */
 const TOWER_BASE = 220;
 function buildTowers() {
-  const slots = [], cyl = new THREE.CylinderGeometry(0.66, 0.66, 7, 32, 1, true), base = new THREE.CylinderGeometry(0.8, 0.86, 0.26, 32), cap = new THREE.TorusGeometry(0.68, 0.05, 8, 32);
+  const slots = [], cyl = new THREE.CylinderGeometry(0.66, 0.66, 6, 32, 1, true), base = new THREE.CylinderGeometry(0.8, 0.86, 0.26, 32), cap = new THREE.TorusGeometry(0.68, 0.05, 8, 32);
   const centers = TOWERS.map(([x, z]) => rectC(x, x + 1, z, z + 1));
   for (const c of centers) {
-    const g = new THREE.Mesh(cyl, M.glass); g.position.set(c.x, 3.76, c.z); scene.add(g);
+    const g = new THREE.Mesh(cyl, M.glass); g.position.set(c.x, 3.26, c.z); scene.add(g);
     const b = new THREE.Mesh(base, M.gold); b.position.set(c.x, 0.13, c.z); scene.add(b);
-    const tp = new THREE.Mesh(cap, M.gold); tp.rotation.x = Math.PI / 2; tp.position.set(c.x, 7.26, c.z); scene.add(tp);
+    const tp = new THREE.Mesh(cap, M.gold); tp.rotation.x = Math.PI / 2; tp.position.set(c.x, 6.26, c.z); scene.add(tp);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.025, 6, 32), M.lampGold); ring.rotation.x = Math.PI / 2; ring.position.set(c.x, 0.3, c.z); scene.add(ring);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.1, 7.5, 24, 1, true), beamMat("#ffcf7a", 0.07)); beam.position.set(c.x, 3.8, c.z); scene.add(beam); M.beams.push(beam);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.1, 6.2, 24, 1, true), beamMat("#ffcf7a", 0.07)); beam.position.set(c.x, 3.2, c.z); scene.add(beam); M.beams.push(beam);
   }
-  for (let l = 0; l < 40; l++) centers.forEach((c) => {
+  for (let l = 0; l < 36; l++) centers.forEach((c) => {
     const rot = l % 2 ? Math.PI / 2 : 0, y = 0.34 + l * 0.16;
     for (const o of [-0.13, 0.13]) { const ox = rot ? o : 0, oz = rot ? 0 : o; slots.push([c.x + ox, y, c.z + oz, 0, rot + rand(-0.04, 0.04), 0, 1.6]); }
   });
@@ -1126,16 +1350,75 @@ function drawVaultHolo(s, t) {
   s.tex.needsUpdate = true;
 }
 function buildHolos() {
-  const defs = [[drawWealthHolo, -10, 7.4, 512, 256], [drawFlowHolo, 0, 5.6, 512, 230], [drawVaultHolo, 10, 7.4, 512, 256]];
+  const defs = [[drawWealthHolo, -11, 4.6, 512, 256], [drawFlowHolo, 0, 3.6, 512, 230], [drawVaultHolo, 11, 4.6, 512, 256]];
   for (const [fn, x, w, cw_, ch] of defs) {
     const s = makeScreen(cw_, ch, fn);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, (w * ch) / cw_), holoMat(s.tex, 0.92));
-    m.position.set(x, 3.9, -H / 2 + 0.35); scene.add(m);
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, 0.04), M.lampBlue); bar.position.set(x, 3.9 - (w * ch) / cw_ / 2 - 0.08, -H / 2 + 0.35); scene.add(bar);
-    animated.push((t) => { m.position.y = 3.9 + Math.sin(t * 0.8 + x) * 0.04; });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, (w * ch) / cw_), holoMat(s.tex, 0.6));
+    m.position.set(x, 2.55, -H / 2 + 0.45); scene.add(m);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, 0.04), M.lampBlue); bar.position.set(x, 2.55 - (w * ch) / cw_ / 2 - 0.08, -H / 2 + 0.45); scene.add(bar);
+    animated.push((t) => { m.position.y = 2.55 + Math.sin(t * 0.8 + x) * 0.04; });
   }
   IM.piles = new THREE.InstancedMesh(G.bundle, M.bundle, 16 * 30);
   IM.piles.frustumCulled = false; IM.piles.count = 0; scene.add(IM.piles);
+}
+
+
+/* --- Konferansebord, research-pulter og planter --- */
+const researchLooks = new Map();
+function drawResearch(s, t) {
+  const { ctx, w, h } = s; ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(6,30,30,.6)"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(45,212,191,.9)"; ctx.lineWidth = 2; ctx.strokeRect(2, 2, w - 4, h - 4);
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 10; c++) { const v = 0.5 + 0.5 * Math.sin(t * 0.6 + r * 1.7 + c * 0.9 + s.off); ctx.fillStyle = `rgba(${v > 0.6 ? "62,224,154" : "255,93,108"},${0.25 + v * 0.6})`; ctx.fillRect(10 + c * ((w - 20) / 10), 34 + r * 16, (w - 20) / 10 - 3, 13); }
+  ctx.fillStyle = "#c8fff2"; ctx.font = "bold 13px monospace"; ctx.fillText("RESEARCH · DEMO", 10, 22);
+  s.tex.needsUpdate = true;
+}
+function buildDecor() {
+  // Konferansebord med stoler
+  const c = rectC(CONF.x0, CONF.x1, CONF.z0, CONF.z1);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.08, 40), M.black); top.scale.set(1.9, 1, 1.1); top.position.set(c.x, 0.76, c.z); scene.add(top);
+  const edge = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 8, 48), M.gold); edge.rotation.x = Math.PI / 2; edge.scale.set(1.9, 1.1, 1); edge.position.set(c.x, 0.76, c.z); scene.add(edge);
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.5, 0.72, 16), M.gold); foot.position.set(c.x, 0.36, c.z); scene.add(foot);
+  const leather = mat("#120d0a", 0.45, 0.1), seat = new THREE.BoxGeometry(0.42, 0.08, 0.42), back = new THREE.BoxGeometry(0.42, 0.55, 0.07), leg = new THREE.CylinderGeometry(0.03, 0.03, 0.42, 6);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * 6.283, x = c.x + Math.cos(a) * 2.35, z = c.z + Math.sin(a) * 1.5;
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = -a - Math.PI / 2;
+    const s1 = new THREE.Mesh(seat, leather); s1.position.y = 0.45; g.add(s1);
+    const b1 = new THREE.Mesh(back, leather); b1.position.set(0, 0.75, -0.19); g.add(b1);
+    const l1 = new THREE.Mesh(leg, M.gold); l1.position.y = 0.21; g.add(l1);
+    scene.add(g);
+  }
+  const globe = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 2), new THREE.MeshBasicMaterial({ color: "#5fb4ff", wireframe: true, transparent: true, opacity: 0.6 }));
+  globe.position.set(c.x, 1.45, c.z); scene.add(globe);
+  const gb = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.6, 24, 1, true), beamMat("#5fb4ff", 0.22)); gb.position.set(c.x, 1.1, c.z); scene.add(gb); M.beams.push(gb);
+  animated.push((t) => { globe.rotation.y = t * 0.4; globe.position.y = 1.45 + Math.sin(t) * 0.05; });
+  M.confC = c.clone().setY(1);
+  addLabel("Konferanse", new THREE.Vector3(c.x, 2.4, c.z));
+
+  // Research-pulter: skjermene vender mot rommet
+  const dtop = new THREE.BoxGeometry(0.8, 0.06, 1.8);
+  for (const [x, z] of RESEARCH) {
+    const p = rectC(x, x, z, z + 1);
+    const t1 = new THREE.Mesh(dtop, M.black); t1.position.set(p.x, 0.77, p.z); scene.add(t1);
+    const e1 = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.03, 1.84), M.gold); e1.position.set(p.x, 0.73, p.z); scene.add(e1);
+    const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.72, 1.5), M.metal); b1.position.set(p.x + 0.05, 0.36, p.z); scene.add(b1);
+    for (const dz of [-0.45, 0.45]) {
+      const scr = makeScreen(200, 140, drawResearch);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.6), holoMat(scr.tex, 0.95)); m.position.set(p.x + 0.2, 1.25, p.z + dz); m.rotation.y = -Math.PI / 2 + 0.12 * Math.sign(-dz); scene.add(m);
+    }
+    for (const dz of [0, 1]) researchLooks.set(key([x - 1, z + dz]), p.clone().setY(1));
+  }
+  addLabel("Research", new THREE.Vector3(rectC(27, 27, 12, 12).x + 0.5, 2.4, rectC(27, 27, 12, 13).z));
+
+  // Planter i svarte gullkantede potter
+  const pot = new THREE.CylinderGeometry(0.32, 0.24, 0.55, 20), rim = new THREE.TorusGeometry(0.32, 0.025, 6, 24), leaf = new THREE.IcosahedronGeometry(0.28, 0);
+  const leafM = new THREE.MeshStandardMaterial({ color: "#1f5c3a", roughness: 0.7, flatShading: true });
+  for (const [x, z] of PLANTS) {
+    const p = cw(x, z);
+    const po = new THREE.Mesh(pot, M.black); po.position.set(p.x, 0.28, p.z); scene.add(po);
+    const r = new THREE.Mesh(rim, M.gold); r.rotation.x = Math.PI / 2; r.position.set(p.x, 0.55, p.z); scene.add(r);
+    for (let i = 0; i < 7; i++) { const l = new THREE.Mesh(leaf, leafM); l.position.set(p.x + rand(-0.22, 0.22), 0.75 + i * 0.12, p.z + rand(-0.22, 0.22)); l.scale.setScalar(rand(0.7, 1.2) * (1 - i * 0.07)); l.rotation.set(rand(0, 3), rand(0, 3), 0); scene.add(l); }
+  }
 }
 
 /* --- Gullstøv --- */
@@ -1145,7 +1428,7 @@ function buildParticles() {
   for (let i = 0; i < count; i++) {
     const nearRing = i < count * 0.4, a = rand(0, 6.283), r = rand(0, 4);
     pos[i * 3] = nearRing ? TABLE_C.x + Math.cos(a) * r : rand(-W / 2, W / 2);
-    pos[i * 3 + 1] = rand(0.3, 8);
+    pos[i * 3 + 1] = rand(0.3, 6.2);
     pos[i * 3 + 2] = nearRing ? TABLE_C.z + Math.sin(a) * r : rand(-H / 2, H / 2);
     sp[i] = rand(0.08, 0.3);
   }
@@ -1154,7 +1437,7 @@ function buildParticles() {
   scene.add(p); M.particles = p;
   animated.push((t, dt) => {
     if (!p.visible) return;
-    for (let i = 0; i < count; i++) { pos[i * 3 + 1] += sp[i] * dt; pos[i * 3] += Math.sin(t * 0.5 + i) * 0.1 * dt; if (pos[i * 3 + 1] > 8.5) pos[i * 3 + 1] = 0.3; }
+    for (let i = 0; i < count; i++) { pos[i * 3 + 1] += sp[i] * dt; pos[i * 3] += Math.sin(t * 0.5 + i) * 0.1 * dt; if (pos[i * 3 + 1] > 6.3) pos[i * 3 + 1] = 0.3; }
     g.attributes.position.needsUpdate = true;
   });
 }
@@ -1409,11 +1692,12 @@ class Agent {
     this.carryValue = 0;
     this.stuck = 0;
     this.workTotal = 0;
+    this.history = [];
     this.look = {
-      suit: role === "manager" ? "#0c0c0e" : role === "vault" ? pick(["#16203a", "#0f1830", "#14182a"]) : pick(SUITS),
+      suit: role === "manager" || role === "executive" ? "#0c0c0e" : role === "vault" ? pick(["#16203a", "#0f1830", "#14182a"]) : pick(SUITS),
       skin: pick(SKINS), hair: pick(HAIRS), hairStyle: Math.random() < 0.15 ? 0 : 1 + Math.floor(Math.random() * 3),
-      glasses: Math.random() < (role === "manager" ? 0.7 : role === "trader" ? 0.4 : 0.22),
-      pocket: role === "manager" || Math.random() < 0.3,
+      glasses: Math.random() < (role === "manager" || role === "executive" ? 0.7 : role === "trader" ? 0.4 : 0.22),
+      pocket: role === "manager" || role === "executive" || Math.random() < 0.3,
       scale: rand(1.12, 1.28),
     };
     this.build();
@@ -1431,7 +1715,7 @@ class Agent {
     const shirt = new THREE.Mesh(G.shirtV, M.shirt); shirt.position.set(0, 0.3, 0.102); up.add(shirt);
     const tie = new THREE.Mesh(G.tie, M.tie); tie.position.set(0, 0.29, 0.104); up.add(tie);
     const pin = new THREE.Mesh(G.pin, M.role[this.role]); pin.position.set(-0.1, 0.33, 0.106); up.add(pin);
-    if (L.pocket) { const pk = new THREE.Mesh(G.pocket, this.role === "manager" ? M.gold : M.shirt); pk.position.set(0.09, 0.31, 0.104); up.add(pk); }
+    if (L.pocket) { const pk = new THREE.Mesh(G.pocket, this.role === "manager" || this.role === "executive" ? M.gold : M.shirt); pk.position.set(0.09, 0.31, 0.104); up.add(pk); }
     this.arms = [-1, 1].map((sx) => {
       const p = new THREE.Group(); p.position.set(sx * 0.2, 0.37, 0);
       p.add(new THREE.Mesh(G.arm, suitM));
@@ -1445,7 +1729,7 @@ class Agent {
     head.add(new THREE.Mesh(G.head, skinM));
     if (L.hairStyle) { const h = new THREE.Mesh(G.hair, hairM); h.position.y = 0.012; h.rotation.x = -0.28; h.scale.set(1.04, L.hairStyle === 3 ? 1.12 : 0.95, 1.06); head.add(h); }
     if (L.glasses) { const gl = new THREE.Mesh(G.glasses, M.glasses); gl.position.set(0, 0.015, 0.11); head.add(gl); }
-    if (this.role === "manager") {
+    if (this.role === "manager" || this.role === "executive") {
       const c = new THREE.Group();
       const box = new THREE.Mesh(G.case, M.case); box.position.y = -0.1; c.add(box);
       const clasp = new THREE.Mesh(G.clasp, M.gold); clasp.position.set(0, -0.03, 0.037); c.add(clasp);
@@ -1521,8 +1805,13 @@ class Agent {
     this.label = o.label || this.label;
     this.activity = o.activity || this.activity;
     this.wantsDoor = !!o.door;
+    this.dest = o.dest || this.label;
     this.updateTag(true);
+    if (o.start) o.start();
   }
+
+  log(text) { if (!text || /Ser seg rundt/.test(text)) return; this.history.unshift({ t: nyTime(), text }); if (this.history.length > 8) this.history.pop(); }
+  status() { return this.state === "celebrating" ? "Feirer" : this.state === "communicating" ? "Kommuniserer" : this.state === "walking" && this.activity === "idle" ? "Går" : this.activity !== "idle" ? ACT_TEXT[this.activity] || "Jobber" : this.state === "walking" ? "Går" : "Ledig"; }
 
   wander() {
     const [cx, cz] = cellOf(this.pos.x, this.pos.z);
@@ -1604,7 +1893,7 @@ class Agent {
         if (this.lookAt) this.faceTowards(this.lookAt, dt);
         this.updateTag();
         if (this.timer <= 0) {
-          const cb = this.onDone; this.onDone = null; this.workTotal = 0; this.state = "idle"; this.timer = 0;
+          const cb = this.onDone; this.onDone = null; this.workTotal = 0; this.state = "idle"; this.timer = 0; this.log(this.label); if (this.role === "manager" || this.role === "executive") { this.done++; stats.done++; }
           Hd.rotation.set(0, 0, 0);
           cb ? cb() : this.finish();
         }
@@ -1819,8 +2108,10 @@ const jobs = {
       } });
     }
     const spot = pickSpot(DESK_SPOTS, a);
-    a.goWork({ cell: spot, look: deskLooks.get(key(spot)) || M.holoC, secs: rand(3, 7), label: pick(["Analyserer markedet", "Leser ordreboka", "Tester strategi", "Følger trenden"]), anim: "type", activity: "work", done: () => {
+    a.goWork({ cell: spot, look: deskLooks.get(key(spot)) || M.holoC, secs: rand(3, 7), label: pick(["Analyserer markedet", "Leser ordreboka", "Tester strategi", "Følger trenden"]), anim: "type", activity: "research", done: () => {
       a.done++; stats.done++;
+      const boss = Math.random() < 0.3 && nearestOf(a, "manager", (o) => o.state !== "walking" && o.state !== "celebrating");
+      if (boss) return meet(a, boss, { label: `Rapporterer til ${boss.name}`, theirs: `Får rapport fra ${a.name}`, done: () => { note("Strategi oppdatert", BLUE, boss.pos, 1.4); feed(`Trading-strategi oppdatert: ${a.tagHtml()} rapporterte til ${boss.tagHtml()}.`); a.finish(); } });
       if (Math.random() < 0.28) {
         const v = BUNDLE * (1 + Math.floor(Math.random() * 3));
         for (let i = 0; i < v / BUNDLE; i++) belt.add(BUNDLE);
@@ -1834,6 +2125,15 @@ const jobs = {
 
   /* Sjef: inspiserer stasjoner og koordinerer andre agenter */
   manager(a) {
+    const r0 = Math.random();
+    if (r0 < 0.3) {
+      const t = agents.filter((o) => o !== a && !["manager", "executive"].includes(o.role) && o.state === "idle" && !o.job).sort(byDist(a, (o) => o.pos))[0];
+      if (t) {
+        t.timer = 6;
+        return meet(a, t, { label: `Tildeler oppgave til ${t.name}`, theirs: "Får ny oppgave", secs: 2, done: () => { note("Ny oppgave tildelt", ROLES.manager.color, t.pos, 1.2); feed(`${a.tagHtml()} tildelte ${t.tagHtml()} en ny oppgave.`); if (t.state === "idle" && !t.job) t.timer = 0; a.finish(); } });
+      }
+    }
+    if (r0 < 0.42) return meeting(a, "Strategimøte", rand(3.5, 5.5));
     if (Math.random() < 0.4) {
       const t = agents.filter((o) => o !== a && o.role !== "manager" && o.state === "working").sort(byDist(a, (o) => o.pos))[0];
       if (t) {
@@ -1848,6 +2148,48 @@ const jobs = {
   },
 };
 let INSPECT = [];
+
+/* Får en annen agent til å stoppe opp og høre etter, uten å avbryte oppgaven den holder på med. */
+function listen(t, from, secs, label) {
+  if (!agents.includes(t) || t.state === "walking" || t.state === "celebrating") return;
+  t.state = "communicating"; t.anim = "talk"; t.lookAt = from.pos;
+  t.timer = Math.max(t.timer, secs); t.workTotal = Math.max(t.workTotal, t.timer);
+  t.label = label; t.updateTag(true);
+}
+function nearestOf(a, role, pred = () => true) { return agents.filter((o) => o !== a && o.role === role && pred(o)).sort(byDist(a, (o) => o.pos))[0]; }
+function meet(a, t, o) {
+  a.goWork({ cell: nearFree(cellOf(t.pos.x, t.pos.z), a.pos), look: t.pos, secs: o.secs || 2.4, label: o.label, anim: "talk", state: "communicating", activity: "talk", claim: false, start: () => listen(t, a, (o.secs || 2.4) + 0.3, o.theirs), done: o.done });
+}
+function meeting(a, label, secs) {
+  a.goWork({ cell: pickSpot(CONF_SPOTS, a), look: M.confC, secs, label, anim: "talk", state: "communicating", activity: "talk", done: () => a.finish() });
+}
+
+Object.assign(jobs, {
+  /* Analytiker: data ved pulten, deler funn med en trader */
+  researcher(a) {
+    const spot = pickSpot(RESEARCH_SPOTS, a);
+    a.goWork({ cell: spot, look: researchLooks.get(key(spot)) || M.confC, secs: rand(4, 7), label: pick(["Gjennomgår data", "Analyserer volum", "Modellerer risiko", "Leser markedsdata"]), anim: "type", activity: "research", done: () => {
+      a.done++; stats.done++;
+      if (Math.random() < 0.3) feed(`${a.tagHtml()}: research-oppgave fullført.`);
+      const t = Math.random() < 0.5 && nearestOf(a, "trader", (o) => o.state === "working" || o.state === "idle");
+      if (t) return meet(a, t, { label: `Deler funn med ${t.name}`, theirs: `Får funn fra ${a.name}`, done: () => { note("Funn delt", ROLES.researcher.color, a.pos, 1.2); feed(`${a.tagHtml()} delte funn med ${t.tagHtml()}.`); a.finish(); } });
+      if (Math.random() < 0.15) return meeting(a, "Presenterer analyse", rand(3, 5));
+      a.finish();
+    } });
+  },
+  /* Direktør: runder med koffert, besøker stasjoner, holder møter */
+  executive(a) {
+    const r = Math.random();
+    if (r < 0.25) return meeting(a, "Leder styremøte", rand(4, 6));
+    if (r < 0.55) {
+      const t = agents.filter((o) => o !== a && o.state === "working" && !["executive"].includes(o.role)).sort(byDist(a, (o) => o.pos))[0];
+      if (t) return meet(a, t, { label: `Sjekker arbeidet til ${t.name}`, theirs: "Rapporterer til direktøren", secs: 2.2, done: () => { if (Math.random() < 0.4) feed(`${a.tagHtml()} inspiserte arbeidet til ${t.tagHtml()}.`); a.finish(); } });
+    }
+    const p = pick(INSPECT);
+    a.goWork({ cell: nearFree(p.cell, a.pos), look: p.look, secs: rand(2.5, 4), label: "Går runden: " + p.label.toLowerCase(), anim: "inspect", activity: "work", claim: false });
+  },
+});
+
 
 /* =========================================================================
    11. Notifikasjoner og aktivitetslogg
@@ -1945,7 +2287,8 @@ function renderBot() {
    13. Grensesnitt
    ========================================================================= */
 const $ = (id) => document.getElementById(id);
-const sim = { paused: false, speed: 1, speeds: [0.25, 0.5, 1, 2, 4] };
+const sim = { paused: false, speed: 1, speeds: [0.5, 1, 2, 4], minutes: 18 * 60 + 30, cinematic: false };
+function nyTime(m = sim.minutes) { const d = Math.floor(m / 1440), mm = Math.floor(m % 1440); return `${String(Math.floor(mm / 60)).padStart(2, "0")}:${String(mm % 60).padStart(2, "0")}${d ? ` (dag ${d + 1})` : ""}`; }
 let selected = null, follow = false;
 
 for (const k of ROLE_KEYS) { const o = document.createElement("option"); o.value = k; o.textContent = ROLES[k].name; $("role-sel").appendChild(o); }
@@ -1975,6 +2318,9 @@ function renderDash(fps) {
   $("f-proc").textContent = moneyShort(eco.processed);
   const hd = eco.hist, span = Math.min(60, hd.length - 1);
   const net = span > 0 ? ((hd[hd.length - 1] - hd[hd.length - 1 - span]) / span) * 60 : 0;
+  const s24 = Math.min(1440, hd.length - 1), ch24 = s24 > 0 ? w - hd[hd.length - 1 - s24] : 0, ch24p = s24 > 0 ? (ch24 / hd[hd.length - 1 - s24]) * 100 : 0;
+  $("w-24").innerHTML = `<span class="${ch24 >= 0 ? "up" : "down"}">${ch24 >= 0 ? "+" : "−"}${moneyShort(Math.abs(ch24))} (${ch24p >= 0 ? "+" : ""}${ch24p.toFixed(2).replace(".", ",")} %)</span>`;
+  $("w-tasks").textContent = nf.format(stats.done);
   $("f-net").textContent = `${net >= 0 ? "+" : "−"}${moneyShort(Math.abs(net))}`;
   $("f-net").className = net >= 0 ? "up" : "down";
   $("f-line").innerHTML = `${belt.count()} bunter på båndet · ${dock.count} på rampa<br>${machines.filter((m) => m.counting > 0).length} av ${machines.length} tellemaskiner i gang · døra ${door.open > 0.05 ? "<span class='gold'>åpen</span>" : "lukket"}`;
@@ -1985,6 +2331,7 @@ function renderDash(fps) {
   $("a-col").textContent = agents.filter((a) => a.activity === "collect").length;
   $("a-tr").textContent = agents.filter((a) => a.activity === "transport").length;
   $("a-idle").textContent = agents.filter((a) => a.state === "idle" || a.activity === "idle").length;
+  $("a-res").textContent = agents.filter((a) => a.activity === "research").length;
   $("a-roles").innerHTML = ROLE_KEYS.map((k) => `<span style="--c:${ROLES[k].color}">${ROLES[k].name} ${agents.filter((a) => a.role === k).length}</span>`).join("");
   $("a-perf").textContent = `${Math.round(fps)} FPS · ${rain.n + wf.n} sedler i lufta · ${stats.done} oppgaver`;
   $("simstate").textContent = sim.paused ? "Pauset" : `Kjører ${sim.speed}x`;
@@ -1994,14 +2341,15 @@ function renderDash(fps) {
 function renderInspector() {
   const a = selected;
   $("i-dot").style.color = a.cfg.color;
-  $("i-name").textContent = a.name;
+  $("i-name").textContent = `${a.name}`;
   $("i-role").textContent = `${a.cfg.name} · ${a.cfg.desc}`;
-  $("i-state").textContent = STATE_TEXT[a.state] || a.state;
+  $("i-state").textContent = a.status();
   $("i-task").textContent = a.label || "–";
   $("i-carry").textContent = a.cart ? `Tralle, ${a.cart.load} bunter` : a.carryValue ? money(a.carryValue) : "–";
   $("i-done").textContent = a.done;
   $("i-speed").textContent = a.speed.toFixed(1) + " m/s";
   $("i-follow").classList.toggle("on", follow);
+  $("i-hist").innerHTML = a.history.length ? a.history.map((h) => `<li><time>${h.t}</time>${escapeHtml(h.text)}</li>`).join("") : "<li class='muted'>Ingen fullførte oppgaver ennå</li>";
 }
 
 function select(a) {
@@ -2023,7 +2371,7 @@ function spawn(role, cell) {
   return a;
 }
 function populate() {
-  const per = isMobile ? { collector: 3, counter: 2, trader: 3, manager: 2, vault: 2 } : { collector: 6, counter: 4, trader: 5, manager: 3, vault: 4 };
+  const per = isMobile ? { collector: 3, counter: 2, trader: 2, manager: 1, vault: 2, researcher: 2, executive: 1 } : { collector: 6, counter: 4, trader: 5, manager: 2, vault: 4, researcher: 3, executive: 2 };
   for (const [role, n] of Object.entries(per)) for (let i = 0; i < n; i++) spawn(role);
 }
 
@@ -2068,7 +2416,7 @@ function setFx(on) {
   M.particles.visible = on;
 }
 function setRain(l) { rain.level = Math.max(0, Math.min(rain.levels.length - 1, l)); $("rainval").textContent = `${rain.level}/${rain.levels.length - 1}`; }
-function setUi(on) { fx.ui = on; document.body.classList.toggle("ui-hidden", !on); $("b-ui").textContent = on ? "Skjul UI" : "Vis UI"; $("b-ui").classList.toggle("on", on); }
+function setUi(on) { fx.ui = on; sim.cinematic = !on; document.body.classList.toggle("ui-hidden", !on); $("b-ui").textContent = on ? "Filmmodus" : "Avslutt filmmodus"; $("b-ui").classList.toggle("on", !on); if (on) userMoved = true; }
 
 $("b-pause").onclick = () => { sim.paused = !sim.paused; $("b-pause").textContent = sim.paused ? "Fortsett" : "Pause"; $("b-pause").classList.toggle("hot", sim.paused); };
 $("b-slow").onclick = () => { const i = sim.speeds.indexOf(sim.speed); sim.speed = sim.speeds[Math.max(0, i - 1)]; $("speed").textContent = sim.speed + "x"; };
@@ -2101,7 +2449,7 @@ if (location.protocol === "file:" || (!location.host.includes("localhost") && !l
 let userMoved = false;
 const PROF = params.has("prof") ? [] : null;
 window.__prof = PROF;
-setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("nb-NO", { hour12: false }); }, 1000);
+setInterval(() => { $("clock").textContent = nyTime(); }, 500);
 
 if (renderer) {
   buildLayout();
@@ -2120,7 +2468,12 @@ if (renderer) {
     { cell: [23, 21], look: M.holoC, label: "Følger med på traderne" },
     { cell: [17, 6], look: TABLE_C, label: "Inspiserer pengeregnet" },
     { cell: [28, 2], look: DOCK_C, label: "Sjekker lasterampa" },
+    { cell: [25, 11], look: rectC(27, 27, 12, 13).setY(1), label: "Følger med på research" },
+    { cell: [12, 12], look: M.confC, label: "Forbereder møtet" },
   ];
+  for (const k of SPOTSET) { const [x, z] = k.split(",").map(Number); if (!free(x, z)) console.warn("Plass er blokkert:", k); }
+  for (const zn of zones) if (!free(...zn.cell)) console.warn("Gulvhaug er blokkert:", zn.cell);
+  for (const p of INSPECT) if (!free(...p.cell)) console.warn("Inspeksjonspunkt er blokkert:", p.cell);
   initRain();
   resetEconomy();
   populate();
@@ -2128,7 +2481,7 @@ if (renderer) {
   setRain(isMobile ? 2 : 3);
   eco.wealth = eco.start = wealth();
   eco.hist.push(eco.wealth);
-  feed("<b class='gold'>Pengerommet er åpent.</b> Alle beløp her er simulert demodata.");
+  feed("<b class='gold'>Velkommen til AI HQ på Manhattan.</b> Alle beløp her er simulert demodata.");
 
   const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
   let downAt = null;
@@ -2143,26 +2496,35 @@ if (renderer) {
   });
 
   // Rolig filmkamera som svinger litt fram og tilbake til brukeren tar over
-  const camOff = camera.position.clone().sub(controls.target), sph = new THREE.Spherical().setFromVector3(camOff), baseTheta = sph.theta;
-  let simTime = 0, frames = 0, fpsAcc = 0, fps = 60, lowFps = 0, screenAcc = 0, hudAcc = 0, slowAcc = 0;
-  const loop = () => {
-    requestAnimationFrame(loop);
-    const raw = Math.min(clock.getDelta(), 0.1);
-    const dt = sim.paused ? 0 : raw * sim.speed;
+  const camOff = camera.position.clone().sub(controls.target), sph = new THREE.Spherical().setFromVector3(camOff), baseTheta = sph.theta, homeTarget = controls.target.clone();
+  let camAng = 0;
+  /* Ett steg i simuleringen. Brukes av hovedløkken (og av tester via window.__lab.step). */
+  function simStep(dt) {
     simTime += dt;
-
-    const T0 = performance.now();
     for (const a of agents) a.update(dt);
-    const T1 = performance.now();
     if (dt) {
       updateRain(dt, simTime);
       updateWaterfall(dt);
       belt.update(dt);
       updateDoor(dt, simTime);
       eco.histT += dt;
-      if (eco.histT >= 1) { eco.histT = 0; eco.hist.push(eco.wealth); if (eco.hist.length > 180) eco.hist.shift(); }
+      sim.minutes += dt;
+      if (eco.histT >= 1) { eco.histT = 0; eco.hist.push(eco.wealth); if (eco.hist.length > 1500) eco.hist.shift(); }
     }
     for (const f of animated) f(simTime, dt);
+  }
+  window.__snap = (withFx = fx.on) => { if (withFx) composer.render(); else renderer.render(scene, camera); return renderer.domElement.toDataURL("image/jpeg", 0.85); };
+  window.__cam = (c) => { userMoved = true; camera.position.set(...c.pos); controls.target.set(...c.target); controls.update(); };
+  window.__step = (secs, h = 0.05) => { for (let t = 0; t < secs; t += h) { simStep(h); if (zonesDirty) rebuildZones(); if (pilesDirty) rebuildPiles(); eco.wealth = wealth(); updateCounts(); } };
+  let simTime = 0, frames = 0, fpsAcc = 0, fps = 60, lowFps = 0, screenAcc = 0, hudAcc = 0, slowAcc = 0;
+  const loop = () => {
+    requestAnimationFrame(loop);
+    const raw = Math.min(clock.getDelta(), 0.1);
+    const dt = sim.paused ? 0 : raw * sim.speed;
+
+    const T0 = performance.now();
+    simStep(dt);
+    const T1 = performance.now();
     updateNotes(raw);
     updateCounts();
     slowAcc += raw;
@@ -2171,9 +2533,29 @@ if (renderer) {
     screenAcc += raw;
     if (screenAcc > 0.5) { screenAcc = 0; for (const s of screens) s.draw(s, simTime); }
 
-    if (!userMoved) { sph.theta = baseTheta + Math.sin(performance.now() / 1000 * 0.05) * 0.22; camera.position.setFromSpherical(sph).add(controls.target); }
-    if (follow && selected) controls.target.lerp(selected.pos, 0.08);
+    const now = performance.now() / 1000;
+    if (sim.cinematic) {
+      camAng += raw * 0.05;
+      const cur = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+      cur.theta += (baseTheta + Math.sin(camAng) * 0.55 - cur.theta) * Math.min(1, raw * 0.8);
+      cur.phi += (sph.phi + Math.sin(camAng * 1.7) * 0.06 - cur.phi) * Math.min(1, raw * 0.8);
+      cur.radius += (sph.radius * 0.95 - cur.radius) * Math.min(1, raw * 0.5);
+      controls.target.lerp(homeTarget, Math.min(1, raw));
+      camera.position.setFromSpherical(cur).add(controls.target);
+    } else if (!userMoved) { sph.theta = baseTheta + Math.sin(now * 0.05) * 0.22; camera.position.setFromSpherical(sph).add(controls.target); }
+    if (follow && selected) {
+      // myk overgang inn mot agenten
+      const off = camera.position.clone().sub(controls.target);
+      controls.target.lerp(selected.pos, Math.min(1, raw * 3));
+      const want = Math.max(controls.minDistance, 13);
+      if (off.length() > want) off.setLength(off.length() + (want - off.length()) * Math.min(1, raw * 1.5));
+      camera.position.copy(controls.target).add(off);
+    }
+    controls.target.x = Math.max(-W / 2, Math.min(W / 2, controls.target.x));
+    controls.target.z = Math.max(-H / 2, Math.min(H / 2, controls.target.z));
+    controls.target.y = Math.max(0, Math.min(4, controls.target.y));
     controls.update();
+    if (camera.position.y < 1.5) camera.position.y = 1.5;
     const T2 = performance.now();
     if (fx.on) composer.render(); else renderer.render(scene, camera);
     const T3 = performance.now();
