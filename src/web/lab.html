@@ -1928,8 +1928,9 @@ function renderBot() {
     const dry = s.mode === "dry";
     pill.className = "pill " + (dry ? "dry" : "live");
     pill.textContent = dry ? "Ekte bot · DRY RUN" : "Ekte bot · LIVE";
-    const tot = s.stats.realizedSol;
-    $("botres").innerHTML = `${s.halted ? "<span class='warn'>Stoppet for i dag</span>" : s.paused ? "<span class='warn'>Kjøp pauset</span>" : "Resultat"}<span class="${tot >= 0 ? "up" : "down"}">${tot >= 0 ? "+" : ""}${tot.toFixed(4)} SOL</span><span class="muted">${dry ? "(simulert med ekte priser)" : "(ekte penger)"}</span>`;
+    const tot = s.stats.realizedSol, day = s.day.realizedPnlSol, px = s.solUsd;
+    const usd = (v) => (typeof px === "number" ? ` (${v < 0 ? "−" : "+"}$${Math.abs(v * px).toFixed(2)})` : "");
+    $("botres").innerHTML = `${s.halted ? "<span class='warn'>Stoppet for i dag</span>" : s.paused ? "<span class='warn'>Kjøp pauset</span>" : "Resultat"}<span class="${tot >= 0 ? "up" : "down"}">${tot >= 0 ? "+" : ""}${tot.toFixed(4)} SOL${usd(tot)}</span> · I dag<span class="${day >= 0 ? "up" : "down"}">${day >= 0 ? "+" : ""}${day.toFixed(4)} SOL${usd(day)}</span><span class="muted">${dry ? "(simulert med ekte priser)" : "(ekte penger)"}</span>`;
     $("b-botpause").hidden = false;
     $("b-botpause").textContent = s.paused ? "Fortsett kjøp" : "Pause kjøp";
   } else {

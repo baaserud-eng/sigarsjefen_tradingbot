@@ -25,6 +25,8 @@ export interface DashboardState {
   mode: "dry" | "live";
   wallet: string | null;
   balanceSol: number;
+  /** Pris for 1 SOL i dollar (fra Jupiter). null hvis den ikke er hentet ennå. */
+  solUsd: number | null;
   paused: boolean;
   halted: boolean;
   rules: {
