@@ -4,6 +4,10 @@ Solana memecoin-bot som skanner nye tokens, sjekker dem for rug-risiko, kopierer
 
 > **Status:** kan handle, og har et dashboard i nettleseren. Boten finner nye tokens på DexScreener, sjekker dem for rug-risiko, kjøper via Jupiter og selger ved stop-loss, take-profit eller tidsgrense. Reddit, X, pump.fun og FOMO-copytrade kommer senere.
 
+## Raskeste start (Windows)
+
+Last ned koden (**Code** → **Download ZIP**), pakk den ut og dobbeltklikk **Start Sigarsjefen.bat**. Den installerer Node.js og pakkene hvis de mangler, starter boten i DRY RUN og åpner dashboardet.
+
 ## Kom i gang
 
 Du trenger [Node.js](https://nodejs.org) versjon 20 eller nyere.
@@ -57,9 +61,11 @@ npm start
 
 Boten venter 10 sekunder før den starter, så du rekker å avbryte med `Ctrl+C`. Stopper du boten, blir åpne posisjoner liggende i walleten og sjekkes igjen neste gang den starter.
 
-## Dashboard
+## 3D-lab og dashboard
 
-Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du:
+Når boten kjører, åpner du **http://localhost:3000** i nettleseren. Der ser du en 3D-lab der små agenter representerer delene av boten: skanneren, sikkerhetssjekken, risiko, trading og drift. De går til stasjonene sine og jobber når boten faktisk gjør noe: skanner nye tokens, avviser en rug, kjøper eller selger. Resultatet øverst til venstre er botens ekte tall (simulert i DRY RUN). Du kan rotere og zoome med musen, klikke på en agent for å se hva den gjør, og pause, endre fart eller legge til agenter i laben. Laben virker uten internett, siden 3D-biblioteket (three.js, MIT-lisens) ligger i `src/web/vendor`.
+
+**Klassisk visning** (knappen nederst, eller http://localhost:3000/klassisk) viser:
 
 - saldo over tid, gevinst/tap og treffprosent
 - åpne posisjoner med verdi og PnL, og en **Selg**-knapp for hver

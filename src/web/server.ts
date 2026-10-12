@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BotEvent, TradeStats } from "../core/logger.js";
 
@@ -24,6 +25,8 @@ export interface DashboardState {
   mode: "dry" | "live";
   wallet: string | null;
   balanceSol: number;
+  /** Pris for 1 SOL i dollar (fra Jupiter). null hvis den ikke er hentet ennå. */
+  solUsd: number | null;
   paused: boolean;
   halted: boolean;
   rules: {
@@ -52,6 +55,21 @@ export interface DashboardActions {
 }
 
 const html = readFileSync(fileURLToPath(new URL("./dashboard.html", import.meta.url)), "utf8");
+const lab = readFileSync(fileURLToPath(new URL("./lab.html", import.meta.url)), "utf8");
+
+/** 3D-biblioteket (three.js) ligger lokalt i web/vendor, så laben virker uten nett. Lastes inn i minnet ved oppstart. */
+const vendorDir = fileURLToPath(new URL("./vendor", import.meta.url));
+const vendor = new Map<string, { body: Buffer; type: string }>();
+(function loadVendor(dir: string) {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) loadVendor(full);
+    else if (/\.(js|txt)$/.test(name)) {
+      const key = "/vendor/" + relative(vendorDir, full).split(sep).join("/");
+      vendor.set(key, { body: readFileSync(full), type: name.endsWith(".js") ? "text/javascript; charset=utf-8" : "text/plain; charset=utf-8" });
+    }
+  }
+})(vendorDir);
 
 export function startWebServer(port: number, getState: () => Promise<DashboardState>, actions: DashboardActions) {
   const allowedHosts = new Set([`localhost:${port}`, `127.0.0.1:${port}`]);
@@ -88,7 +106,13 @@ export function startWebServer(port: number, getState: () => Promise<DashboardSt
       if (!allowedHosts.has(req.headers.host ?? "")) return send(res, 403, '{"error":"Ukjent vert"}');
       const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
 
-      if (req.method === "GET" && url.pathname === "/") return send(res, 200, html, "text/html; charset=utf-8");
+      if (req.method === "GET" && url.pathname === "/") return send(res, 200, lab, "text/html; charset=utf-8");
+      if (req.method === "GET" && vendor.has(url.pathname)) {
+        const f = vendor.get(url.pathname)!;
+        res.writeHead(200, { "content-type": f.type, "cache-control": "max-age=86400", "x-content-type-options": "nosniff" });
+        return res.end(f.body);
+      }
+      if (req.method === "GET" && url.pathname === "/klassisk") return send(res, 200, html, "text/html; charset=utf-8");
       if (req.method === "GET" && url.pathname === "/api/state") return send(res, 200, JSON.stringify(await getState()));
 
       if (req.method === "POST" && url.pathname.startsWith("/api/")) {

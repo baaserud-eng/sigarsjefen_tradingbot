@@ -30,6 +30,8 @@ export interface SafetyFinding {
   severity: "critical" | "warn" | "info";
   points: number;
   reason: string;
+  /** Tegn på at tokenen er laget for å svindle (rug pull), ikke bare risikabel */
+  rug?: boolean;
 }
 
 export interface SafetyResult {
@@ -42,27 +44,32 @@ export interface SafetyResult {
 
 export function scoreToken(f: TokenFacts, rules: SafetyRules): SafetyResult {
   const findings: SafetyFinding[] = [];
-  const add = (severity: SafetyFinding["severity"], points: number, reason: string) =>
-    findings.push({ severity, points, reason });
+  const add = (severity: SafetyFinding["severity"], points: number, reason: string, rug = false) =>
+    findings.push({ severity, points, reason, ...(rug ? { rug } : {}) });
 
-  if (f.mintAuthority) add("critical", 40, "Mint authority er på: utvikleren kan lage nye tokens og dumpe prisen");
-  if (f.freezeAuthority) add("critical", 40, "Freeze authority er på: utvikleren kan fryse tokens slik at du ikke får solgt");
-  for (const ext of f.riskyExtensions) add("critical", 40, `Farlig Token-2022-utvidelse: ${ext}`);
+  if (f.mintAuthority) add("critical", 40, "Mint authority er på: utvikleren kan lage nye tokens og dumpe prisen", true);
+  if (f.freezeAuthority) add("critical", 40, "Freeze authority er på: utvikleren kan fryse tokens slik at du ikke får solgt", true);
+  for (const ext of f.riskyExtensions) add("critical", 40, `Farlig Token-2022-utvidelse: ${ext}`, true);
 
-  if (f.top10HolderPct === null) {
-    add("warn", 10, "Klarte ikke å hente topp-holdere");
-  } else if (f.top10HolderPct > rules.maxTop10HolderPct * 1.5) {
-    add("warn", 35, `Topp-10 holdere eier ${f.top10HolderPct.toFixed(1)}% (grense ${rules.maxTop10HolderPct}%)`);
-  } else if (f.top10HolderPct > rules.maxTop10HolderPct) {
-    add("warn", 20, `Topp-10 holdere eier ${f.top10HolderPct.toFixed(1)}% (grense ${rules.maxTop10HolderPct}%)`);
-  }
-
+  // Grensene fra .env er absolutte: brytes en av dem, kjøpes ikke tokenen.
   if (f.liquidityUsd === null) {
     add("critical", 40, "Fant ingen pool med likviditet");
-  } else if (f.liquidityUsd < rules.minLiquidityUsd / 2) {
-    add("warn", 35, `Svært lav likviditet: $${Math.round(f.liquidityUsd).toLocaleString("nb-NO")}`);
   } else if (f.liquidityUsd < rules.minLiquidityUsd) {
-    add("warn", 20, `Lav likviditet: $${Math.round(f.liquidityUsd).toLocaleString("nb-NO")}`);
+    add("critical", 40, `For lav likviditet: $${Math.round(f.liquidityUsd).toLocaleString("nb-NO")} (minimum $${rules.minLiquidityUsd.toLocaleString("nb-NO")})`);
+  } else if (f.liquidityUsd < rules.minLiquidityUsd * 2) {
+    add("warn", 10, `Likviditeten er lav: $${Math.round(f.liquidityUsd).toLocaleString("nb-NO")}`);
+  }
+
+  // Holdere sjekkes bare når likviditeten er god nok (ellers er tokenen avvist uansett).
+  const liquidityOk = f.liquidityUsd !== null && f.liquidityUsd >= rules.minLiquidityUsd;
+  if (liquidityOk) {
+    if (f.top10HolderPct === null) {
+      add("critical", 40, "Klarte ikke å sjekke topp-holdere, så tokenen kan ikke verifiseres");
+    } else if (f.top10HolderPct > rules.maxTop10HolderPct) {
+      add("critical", 40, `Topp-10 holdere eier ${f.top10HolderPct.toFixed(1)}% (grense ${rules.maxTop10HolderPct}%)`);
+    } else if (f.top10HolderPct > rules.maxTop10HolderPct * 0.75) {
+      add("warn", 10, `Topp-10 holdere eier ${f.top10HolderPct.toFixed(1)}%, nær grensen på ${rules.maxTop10HolderPct}%`);
+    }
   }
 
   if (f.poolAgeMinutes !== null && f.poolAgeMinutes < 10) {

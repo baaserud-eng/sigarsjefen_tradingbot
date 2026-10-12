@@ -33,14 +33,22 @@ test("ingen pool gir avslag", () => {
   assert.equal(scoreToken({ ...safe, liquidityUsd: null }, rules).passed, false);
 });
 
-test("høy holder-konsentrasjon og lav likviditet til sammen gir avslag", () => {
-  const r = scoreToken({ ...safe, top10HolderPct: 50, liquidityUsd: 6000 }, rules);
-  assert.equal(r.score, 30);
+test("likviditet under minimum gir alltid avslag", () => {
+  const r = scoreToken({ ...safe, liquidityUsd: 12000 }, rules);
   assert.equal(r.passed, false);
+  assert.ok(r.findings.some((f) => f.severity === "critical"));
 });
 
-test("litt over holder-grensen alene er fortsatt ok", () => {
-  const r = scoreToken({ ...safe, top10HolderPct: 35 }, rules);
+test("topp-10 over grensen gir alltid avslag, også bare litt over", () => {
+  assert.equal(scoreToken({ ...safe, top10HolderPct: 31 }, rules).passed, false);
+});
+
+test("ukjente topp-holdere gir avslag (kan ikke verifiseres)", () => {
+  assert.equal(scoreToken({ ...safe, top10HolderPct: null }, rules).passed, false);
+});
+
+test("nær grensene gir trekk, men godkjennes", () => {
+  const r = scoreToken({ ...safe, top10HolderPct: 25, liquidityUsd: 20000 }, rules);
   assert.equal(r.score, 80);
   assert.equal(r.passed, true);
 });

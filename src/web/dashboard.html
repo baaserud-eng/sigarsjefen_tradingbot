@@ -98,6 +98,7 @@ tr+tr td{border-top:1px solid var(--line)}
   <div class="kv">Rugs avvist<span id="rugs">0</span></div>
   <div class="kv">Oppetid<span id="uptime">–</span></div>
   <div class="right">
+    <a class="btn" href="/" style="text-decoration:none;color:inherit">3D-lab</a>
     <button class="btn" id="toggle" type="button">Pause kjøp</button>
     <div class="clock" id="clock">--:--:--</div>
   </div>
@@ -260,15 +261,16 @@ function render(s) {
   const st = s.halted ? ["halted", "Stoppet for i dag"] : s.paused ? ["paused", "Pauset"] : ["", "Kjører"];
   $("dot").className = "dot " + st[0]; $("status").textContent = st[1];
   $("toggle").textContent = s.paused ? "Fortsett kjøp" : "Pause kjøp";
-  $("bal").textContent = s.balanceSol.toFixed(4) + " SOL";
+  const usd = (v) => (typeof s.solUsd === "number" ? `${v < 0 ? "−" : v > 0 ? "+" : ""}$${Math.abs(v * s.solUsd).toFixed(2)}` : "");
+  $("bal").textContent = s.balanceSol.toFixed(4) + " SOL" + (typeof s.solUsd === "number" ? ` ($${(s.balanceSol * s.solUsd).toFixed(2)})` : "");
   const up = Math.floor((Date.now() - new Date(s.startedAt).getTime()) / 60000);
   $("uptime").textContent = up >= 60 ? `${Math.floor(up / 60)}t ${up % 60}m` : `${up}m`;
   $("scanned").textContent = s.events.filter((e) => typeof e.data?.score === "number").length;
   $("rugs").textContent = s.events.filter((e) => e.type === "rug" && e.data?.score !== undefined).length;
 
   const tot = s.stats.realizedSol;
-  $("pnl").innerHTML = `${sol(tot)}<small> SOL</small>`; $("pnl").className = "big " + (tot >= 0 ? "up" : "down");
-  $("pnlday").textContent = sol(s.day.realizedPnlSol) + " SOL"; $("pnlday").className = s.day.realizedPnlSol >= 0 ? "up" : "down";
+  $("pnl").innerHTML = `${sol(tot)}<small> SOL</small>${usd(tot) ? `<small class="usd"> ≈ ${usd(tot)}</small>` : ""}`; $("pnl").className = "big " + (tot >= 0 ? "up" : "down");
+  $("pnlday").textContent = sol(s.day.realizedPnlSol) + " SOL" + (usd(s.day.realizedPnlSol) ? ` (${usd(s.day.realizedPnlSol)})` : ""); $("pnlday").className = s.day.realizedPnlSol >= 0 ? "up" : "down";
   $("trades").textContent = s.stats.trades;
   $("wr").textContent = s.stats.trades ? Math.round((s.stats.wins / s.stats.trades) * 100) + "%" : "–";
   $("best").textContent = s.stats.trades ? sol(s.stats.best, 3) : "–";

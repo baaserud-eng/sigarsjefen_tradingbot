@@ -9,7 +9,7 @@ import { Connection } from "@solana/web3.js";
 import { loadConfig } from "./config.js";
 import { loadHistory, log, recentEvents, tradeStats, useLogFile } from "./core/logger.js";
 import { getBalanceSol, loadWallet } from "./core/wallet.js";
-import { JupiterSwapper } from "./exec/jupiter.js";
+import { JupiterSwapper, SOL_MINT } from "./exec/jupiter.js";
 import { RiskManager } from "./risk/riskManager.js";
 import { checkToken } from "./safety/index.js";
 import { DexScreenerScanner } from "./scanner/dexscreener.js";
@@ -39,10 +39,11 @@ async function main() {
     startBalance,
     `data/state-${mode}.json`,
   );
+  const swapper = new JupiterSwapper(conn, cfg, wallet);
   const trader = new Trader({
     cfg,
     risk,
-    swapper: new JupiterSwapper(conn, cfg, wallet),
+    swapper,
     checkSafety: (mint) => checkToken(conn, cfg, mint),
     walletBalanceSol: () => getBalanceSol(conn, cfg, wallet),
   });
@@ -51,6 +52,21 @@ async function main() {
 
   // Saldo + verdien av åpne posisjoner. Saldoen caches så dashboardet ikke spør RPC hvert 2. sekund.
   let lastBalance = await trader.balanceSol();
+
+  // SOL-kurs i dollar, så dashboardet kan vise gevinst og tap i $. Hentes fra Jupiter (1 SOL -> USDC) hvert minutt.
+  const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  let solUsd: number | null = null;
+  const refreshSolUsd = async () => {
+    try {
+      const q = await swapper.quote(SOL_MINT, USDC, 1_000_000_000n);
+      const px = Number(q.outAmount) / 1e6;
+      if (px > 0) solUsd = px;
+    } catch {
+      /* beholder forrige kurs */
+    }
+  };
+  await refreshSolUsd();
+  setInterval(refreshSolUsd, 60_000).unref();
   const totalValue = () =>
     lastBalance +
     risk.state.openPositions.reduce((s, p) => s + (trader.valuations.get(p.mint)?.valueSol ?? p.sizeSol), 0);
@@ -66,6 +82,7 @@ async function main() {
       mode: cfg.DRY_RUN ? "dry" : "live",
       wallet: wallet?.publicKey.toBase58() ?? null,
       balanceSol: lastBalance,
+      solUsd,
       paused: trader.paused,
       halted: risk.state.halted,
       rules: {
@@ -166,13 +183,15 @@ async function main() {
         for (const c of candidates) {
           if (!running || risk.state.halted || trader.paused) break;
           await trader.consider(c.mint, c.source);
+          // Litt pause mellom hver sjekk, så gratisplanen hos Helius ikke blokkerer oss (429).
+          await sleep(400);
         }
         lastBalance = await trader.balanceSol();
       }
 
       if (Date.now() - lastHeartbeat > 60_000) {
         lastHeartbeat = Date.now();
-        log("heartbeat", `Saldo ${lastBalance.toFixed(4)} SOL · åpne ${risk.state.openPositions.length} · dagens PnL ${risk.state.realizedPnlSol >= 0 ? "+" : ""}${risk.state.realizedPnlSol.toFixed(4)} SOL${risk.state.halted ? " · STOPPET FOR I DAG" : trader.paused ? " · PAUSET" : ""}`);
+        log("heartbeat", `Saldo ${lastBalance.toFixed(4)} SOL · åpne ${risk.state.openPositions.length} · dagens PnL ${risk.state.realizedPnlSol >= 0 ? "+" : ""}${risk.state.realizedPnlSol.toFixed(4)} SOL${solUsd ? ` (${risk.state.realizedPnlSol < 0 ? "−" : "+"}$${Math.abs(risk.state.realizedPnlSol * solUsd).toFixed(2)})` : ""}${risk.state.halted ? " · STOPPET FOR I DAG" : trader.paused ? " · PAUSET" : ""}`);
       }
     } catch (e) {
       log("error", (e as Error).message);

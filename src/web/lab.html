@@ -1,0 +1,2204 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sigarsjefen · Pengerommet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three.module.min.js",
+  "three/addons/": "/vendor/addons/"
+} }
+</script>
+<style>
+/* Fullskjerms 3D-pengerom med glasspaneler i hjørnene. Mørkt, gull og litt blått. */
+:root{
+  color-scheme:dark;
+  --bg:#050404; --glass:rgba(13,10,7,.68); --glass-hi:rgba(22,17,10,.86); --line:rgba(212,166,69,.24); --line-hi:rgba(232,192,106,.55);
+  --fg:#f6efe0; --dim:#b9ad93; --faint:#7d735e;
+  --gold:#e8c06a; --gold2:#d4a645; --blue:#5fb4ff; --up:#3ee09a; --down:#ff5d6c; --warn:#ffb347;
+  --display:"Chakra Petch","Arial Narrow",system-ui,sans-serif;
+  --serif:"Cormorant Garamond",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);overflow:hidden}
+body{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+#labels{position:fixed;inset:0;pointer-events:none}
+
+.panel{position:fixed;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(232,192,106,.12)}
+.panel::before{content:"";position:absolute;left:-1px;top:-1px;width:18px;height:18px;border-left:2px solid var(--gold);border-top:2px solid var(--gold);pointer-events:none}
+.ph{color:var(--dim);font-size:10px;letter-spacing:.16em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ph b{color:var(--gold);font-weight:500}
+.sim{color:var(--warn);font-size:9px;letter-spacing:.12em;border:1px solid currentColor;padding:1px 5px}
+#top{top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 12px}
+.brand{font-family:var(--serif);font-weight:600;font-size:21px;letter-spacing:.04em;line-height:1}
+.brand b{color:var(--gold);font-style:italic}
+.pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid currentColor;white-space:nowrap}
+.pill.demo{color:var(--warn)}.pill.dry{color:var(--blue)}.pill.live{color:var(--up)}.pill.off{color:var(--faint)}
+.kv{color:var(--dim);font-size:11px}
+.kv span{color:var(--fg);margin-left:5px}
+.grow{flex:1}
+.clock{font-family:var(--display);font-size:15px;color:var(--gold)}
+
+#wealth{top:68px;left:12px;width:262px}
+.big{font-family:var(--display);font-size:28px;font-weight:700;color:var(--gold);line-height:1.05;text-shadow:0 0 18px rgba(232,192,106,.35)}
+.sub{color:var(--dim);font-size:11px;margin:3px 0 8px}
+.sub b{font-weight:600}
+.rows{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:11px}
+.rows dt{color:var(--faint)}.rows dd{margin:0;text-align:right}
+#w-spark{display:block;width:100%;height:42px;margin-top:8px}
+.tag{color:var(--warn);font-size:9.5px;letter-spacing:.05em;margin-top:6px;display:block;line-height:1.4}
+.up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.muted{color:var(--faint)}.gold{color:var(--gold)}.blue{color:var(--blue)}
+
+#flow{top:68px;right:12px;width:262px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fgrid i{display:block;font-style:normal;color:var(--faint);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
+.fgrid b{font-family:var(--display);font-size:17px;font-weight:700}
+.fline{margin-top:9px;border-top:1px solid var(--line);padding-top:7px;color:var(--dim);font-size:10.5px;line-height:1.5}
+
+#feed{left:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));width:340px;max-height:30vh;display:flex;flex-direction:column}
+#feedlist{overflow:auto;display:flex;flex-direction:column;gap:3px;min-height:0}
+#feedlist div{display:grid;grid-template-columns:40px 1fr;gap:8px;font-size:11px;line-height:1.35;animation:fin .4s ease}
+#feedlist time{color:var(--faint)}
+#feedlist span{color:var(--dim);overflow-wrap:anywhere}
+#feedlist span b{font-weight:500}
+@keyframes fin{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+
+#agentstat{right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));width:262px}
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center}
+.sgrid b{display:block;font-family:var(--display);font-size:19px;font-weight:700}
+.sgrid i{font-style:normal;color:var(--faint);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase}
+.roles{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;border-top:1px solid var(--line);padding-top:7px;font-size:10px;color:var(--dim)}
+.roles span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c);margin-right:5px;vertical-align:0}
+.perf{margin-top:6px;color:var(--faint);font-size:10px}
+
+#controls{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;padding:7px 10px}
+.btn{background:rgba(232,192,106,.04);border:1px solid var(--line-hi);padding:6px 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg)}
+.btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(232,192,106,.1)}
+.btn.on{border-color:var(--gold);color:var(--gold)}
+.btn.hot{border-color:var(--warn);color:var(--warn)}
+.sep{width:1px;height:22px;background:var(--line)}
+.lbl{color:var(--faint);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+select{background:#120e08;border:1px solid var(--line-hi);padding:5px 6px;font-size:11px}
+.val{min-width:34px;text-align:center;color:var(--gold)}
+a.btn{text-decoration:none}
+
+#inspect{right:12px;top:290px;width:262px}
+#inspect[hidden]{display:none}
+.ins-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ins-dot{width:12px;height:12px;border-radius:50%;box-shadow:0 0 10px currentColor;background:currentColor}
+.ins-name{font-family:var(--display);font-size:18px;font-weight:700}
+.ins-role{color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.ins-actions{display:flex;gap:6px;margin-top:10px}
+
+body.ui-hidden .dash{display:none!important}
+
+/* Etiketter i 3D-verdenen */
+.tag3d{font-family:var(--mono);font-size:10px;line-height:1.2;padding:3px 6px;background:rgba(10,8,5,.8);border:1px solid var(--c,#888);color:#f6efe0;white-space:nowrap;transform:translateY(-6px);box-shadow:0 0 10px color-mix(in srgb,var(--c) 40%,transparent)}
+.tag3d b{color:var(--c);font-weight:600}
+.tag3d .prog{height:2px;background:rgba(255,255,255,.12);margin-top:3px}
+.tag3d .prog i{display:block;height:100%;background:var(--c)}
+.tag3d.sel{outline:1px solid #fff}
+.tag3d.quiet{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;background:var(--c);border:0;box-shadow:0 0 8px var(--c)}
+.tag3d.quiet *{display:none}
+.room3d{font-family:var(--serif);font-size:16px;font-weight:600;font-style:italic;letter-spacing:.08em;color:var(--gold);text-shadow:0 0 14px rgba(232,192,106,.6),0 1px 2px #000;opacity:.92;white-space:nowrap}
+.note3d{font-family:var(--display);font-size:12px;font-weight:700;padding:4px 9px;border:1px solid var(--c);background:rgba(10,8,5,.86);color:var(--c);white-space:nowrap;box-shadow:0 0 16px color-mix(in srgb,var(--c) 50%,transparent)}
+.hide-labels .tag3d,.hide-labels .room3d{display:none}
+
+#fallback{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
+#fallback.show{display:flex}
+#fallback div{max-width:420px;line-height:1.6;color:var(--dim)}
+#fallback h2{font-family:var(--serif);color:var(--fg);font-size:28px}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:22px;font-style:italic;letter-spacing:.1em;color:var(--gold);pointer-events:none;transition:opacity .8s;background:var(--bg)}
+
+@media (max-width:1100px){ #feed{width:290px} }
+@media (max-width:820px){
+  #feed,#flow{display:none}
+  #wealth{width:auto;right:12px;padding:8px 10px}
+  #wealth .rows,#w-spark{display:none}
+  .big{font-size:22px}
+  #agentstat{left:12px;right:12px;width:auto;bottom:calc(112px + env(safe-area-inset-bottom,0px));padding:7px 10px}
+  .roles,.perf{display:none}
+  #inspect{left:12px;right:12px;width:auto;top:auto;bottom:calc(196px + env(safe-area-inset-bottom,0px))}
+  #top .kv{display:none}
+  .brand{font-size:18px}
+  #controls{gap:4px}
+  .btn{padding:6px 8px}
+  .sep,.lbl{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="stage" aria-label="3D-pengerom der agenter i dress samler, teller og lagrer penger"></div>
+<div id="labels"></div>
+<div id="loading">Åpner hvelvet…</div>
+
+<header id="top" class="panel">
+  <div class="brand">Sigarsjefen <b>Pengerommet</b></div>
+  <span class="pill demo">Simulert demo</span>
+  <span class="pill off" id="botpill">Ekte bot: kobler til…</span>
+  <div class="kv" id="botres"></div>
+  <div class="grow"></div>
+  <div class="clock" id="clock">--:--:--</div>
+</header>
+
+<section id="wealth" class="panel dash" aria-label="Total formue">
+  <div class="ph">Total formue <span class="sim">Simulert</span></div>
+  <div class="big" id="w-total">$0</div>
+  <div class="sub"><b id="w-day" class="up">+0,00 %</b> i dag</div>
+  <dl class="rows">
+    <dt>I hvelvet</dt><dd id="w-vault" class="gold">–</dd>
+    <dt>Pengefjellet</dt><dd id="w-mountain">–</dd>
+    <dt>På gulvet og i omløp</dt><dd id="w-float">–</dd>
+  </dl>
+  <canvas id="w-spark" width="476" height="84" aria-hidden="true"></canvas>
+  <span class="tag">Demotall fra simuleringen. Ikke ekte penger, og ikke botens resultat.</span>
+</section>
+
+<section id="flow" class="panel dash" aria-label="Pengestrøm">
+  <div class="ph">Pengestrøm <span class="sim">Simulert</span></div>
+  <div class="fgrid">
+    <div><i>Samlet inn</i><b id="f-col">$0</b></div>
+    <div><i>Satt i hvelvet</i><b id="f-dep" class="gold">$0</b></div>
+    <div><i>Talt opp</i><b id="f-proc">$0</b></div>
+    <div><i>Netto per min</i><b id="f-net" class="up">$0</b></div>
+  </div>
+  <div class="fline" id="f-line">–</div>
+</section>
+
+<aside id="inspect" class="panel dash" hidden aria-label="Valgt agent">
+  <div class="ins-h"><span class="ins-dot" id="i-dot"></span><div><div class="ins-name" id="i-name">–</div><div class="ins-role" id="i-role">–</div></div></div>
+  <dl class="rows">
+    <dt>Status</dt><dd id="i-state">–</dd>
+    <dt>Oppgave</dt><dd id="i-task">–</dd>
+    <dt>Bærer</dt><dd id="i-carry">–</dd>
+    <dt>Fullført</dt><dd id="i-done">–</dd>
+    <dt>Fart</dt><dd id="i-speed">–</dd>
+  </dl>
+  <div class="ins-actions">
+    <button class="btn" id="i-follow" type="button">Følg med kamera</button>
+    <button class="btn" id="i-close" type="button">Lukk</button>
+  </div>
+</aside>
+
+<section id="feed" class="panel dash" aria-label="Aktivitet">
+  <div class="ph">Aktivitet <b>live</b></div>
+  <div id="feedlist" aria-live="polite"></div>
+</section>
+
+<section id="agentstat" class="panel dash" aria-label="Agentstatus">
+  <div class="ph">Agentstatus <b id="simstate">Kjører</b></div>
+  <div class="sgrid">
+    <div><b id="a-on">0</b><i>Online</i></div>
+    <div><b id="a-work" class="gold">0</b><i>Jobber</i></div>
+    <div><b id="a-col">0</b><i>Samler</i></div>
+    <div><b id="a-tr" class="blue">0</b><i>Frakter</i></div>
+    <div><b id="a-idle" class="muted">0</b><i>Ledig</i></div>
+  </div>
+  <div class="roles" id="a-roles"></div>
+  <div class="perf" id="a-perf">–</div>
+</section>
+
+<nav id="controls" class="panel" aria-label="Kontroller">
+  <button class="btn" id="b-pause" type="button">Pause</button>
+  <span class="lbl">Fart</span>
+  <button class="btn" id="b-slow" type="button" aria-label="Saktere">−</button>
+  <span class="val" id="speed">1x</span>
+  <button class="btn" id="b-fast" type="button" aria-label="Raskere">+</button>
+  <span class="sep"></span>
+  <span class="lbl">Pengeregn</span>
+  <button class="btn" id="b-rainless" type="button" aria-label="Mindre pengeregn">−</button>
+  <span class="val" id="rainval">3/5</span>
+  <button class="btn" id="b-rainmore" type="button" aria-label="Mer pengeregn">+</button>
+  <span class="sep"></span>
+  <select id="role-sel" aria-label="Type agent"></select>
+  <button class="btn" id="b-spawn" type="button">Ny agent</button>
+  <button class="btn" id="b-pile" type="button">Ny pengehaug</button>
+  <span class="sep"></span>
+  <button class="btn on" id="b-ui" type="button">Skjul UI</button>
+  <button class="btn on" id="b-labels" type="button">Etiketter</button>
+  <button class="btn on" id="b-fx" type="button">Filmlys</button>
+  <button class="btn" id="b-reset" type="button">Nullstill</button>
+  <span class="sep"></span>
+  <button class="btn" id="b-botpause" type="button" hidden>Pause kjøp</button>
+  <a class="btn" id="b-classic" href="/klassisk">Klassisk visning</a>
+</nav>
+
+<div id="fallback"><div><h2>3D er ikke tilgjengelig</h2><p>Nettleseren eller grafikkortet ditt støtter ikke WebGL, så pengerommet kan ikke vises. Boten kjører som vanlig.</p><p><a class="btn" href="/klassisk">Åpne klassisk visning</a></p></div></div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { Reflector } from "three/addons/objects/Reflector.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+/* =========================================================================
+   1. Roller, konstanter og formatering
+   ========================================================================= */
+const ROLES = {
+  collector: { name: "Innsamler",     desc: "Samler sedler og leverer til hvelvet", color: "#fbbf24", speed: [1.5, 1.9] },
+  counter:   { name: "Teller",        desc: "Kjører tellemaskinene",                color: "#34d399", speed: [1.2, 1.5] },
+  trader:    { name: "Trader",        desc: "Analyserer markedet ved terminalene",  color: "#60a5fa", speed: [1.3, 1.7] },
+  manager:   { name: "Sjef",          desc: "Inspiserer og koordinerer",            color: "#c084fc", speed: [1.0, 1.3] },
+  vault:     { name: "Hvelvarbeider", desc: "Frakter traller til hvelvet",          color: "#fb923c", speed: [1.2, 1.5] },
+};
+const ROLE_KEYS = Object.keys(ROLES);
+const NAMES = ["Harald","Viktor","Ingrid","Magnus","Sofie","Leon","Astrid","Oskar","Nora","Henrik","Thea","Emil","Selma","Johan","Frida","Aksel","Maja","Sander","Iben","Jonas","Vilde","Mathias","Live","Kasper","Ella","Tobias","Ada","Filip","Mia","Even"];
+const STATE_TEXT = { idle: "Ledig", walking: "Går", working: "Jobber", communicating: "Snakker", celebrating: "Feirer" };
+const GOLD = "#e8c06a", BLUE = "#5fb4ff";
+const NOTE = 100, BUNDLE = 10000;  // én seddel og én bunt i den simulerte økonomien
+const W = 36, H = 24;              // rutenett, 1 rute = 1 meter
+const CEIL = 9.5, RING_Y = 8.2;
+
+const nf = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 });
+const money = (v) => "$" + nf.format(Math.round(v));
+const moneyShort = (v) => (Math.abs(v) >= 1e6 ? "$" + (v / 1e6).toFixed(2).replace(".", ",") + " mill." : Math.abs(v) >= 1e4 ? "$" + nf.format(Math.round(v / 1000)) + "k" : money(v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* =========================================================================
+   2. Kart og stifinning (A* på rutenett)
+   ========================================================================= */
+const blocked = new Uint8Array(W * H);
+const cellTop = new Float32Array(W * H); // høyden sedler lander på i hver rute
+const idx = (x, z) => z * W + x;
+const inB = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
+const free = (x, z) => inB(x, z) && !blocked[idx(x, z)];
+const cw = (cx, cz) => new THREE.Vector3(cx - W / 2 + 0.5, 0, cz - H / 2 + 0.5);
+const cellOf = (x, z) => [Math.floor(x + W / 2), Math.floor(z + H / 2)];
+const walkableAt = (x, z) => { const [cx, cz] = cellOf(x, z); return free(cx, cz); };
+const rectC = (x0, x1, z0, z1) => new THREE.Vector3((x0 + x1) / 2 - W / 2 + 0.5, 0, (z0 + z1) / 2 - H / 2 + 0.5);
+function block(x, z, top = 1) { if (!inB(x, z)) return; blocked[idx(x, z)] = 1; cellTop[idx(x, z)] = Math.max(cellTop[idx(x, z)], top); }
+function unblock(x, z) { if (!inB(x, z)) return; blocked[idx(x, z)] = 0; cellTop[idx(x, z)] = 0; }
+
+function astar(sx, sz, tx, tz) {
+  if (!free(tx, tz)) return null;
+  const n = W * H, g = new Float32Array(n).fill(Infinity), f = new Float32Array(n).fill(Infinity), from = new Int32Array(n).fill(-1), closed = new Uint8Array(n);
+  const open = [idx(sx, sz)];
+  g[open[0]] = 0;
+  const h = (x, z) => { const dx = Math.abs(x - tx), dz = Math.abs(z - tz); return dx + dz + (Math.SQRT2 - 2) * Math.min(dx, dz); };
+  f[open[0]] = h(sx, sz);
+  const goal = idx(tx, tz);
+  while (open.length) {
+    let bi = 0;
+    for (let i = 1; i < open.length; i++) if (f[open[i]] < f[open[bi]]) bi = i;
+    const cur = open.splice(bi, 1)[0];
+    if (cur === goal) break;
+    closed[cur] = 1;
+    const cx = cur % W, cz = (cur / W) | 0;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dz) continue;
+      const nx = cx + dx, nz = cz + dz;
+      if (!free(nx, nz)) continue;
+      if (dx && dz && (!free(cx + dx, cz) || !free(cx, cz + dz))) continue;
+      const ni = idx(nx, nz);
+      if (closed[ni]) continue;
+      const ng = g[cur] + (dx && dz ? Math.SQRT2 : 1);
+      if (ng < g[ni]) { g[ni] = ng; f[ni] = ng + h(nx, nz); from[ni] = cur; if (!open.includes(ni)) open.push(ni); }
+    }
+  }
+  if (from[goal] === -1 && goal !== idx(sx, sz)) return null;
+  const cells = [];
+  for (let c = goal; c !== -1; c = from[c]) cells.unshift([c % W, (c / W) | 0]);
+  return cells;
+}
+
+function lineClear(a, b) {
+  const d = a.distanceTo(b), steps = Math.ceil(d / 0.2);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps, x = a.x + (b.x - a.x) * t, z = a.z + (b.z - a.z) * t;
+    for (const [ox, oz] of [[0, 0], [0.22, 0], [-0.22, 0], [0, 0.22], [0, -0.22]]) if (!walkableAt(x + ox, z + oz)) return false;
+  }
+  return true;
+}
+
+function findPath(from, cell) {
+  const [sx, sz] = cellOf(from.x, from.z);
+  const cells = astar(Math.max(0, Math.min(W - 1, sx)), Math.max(0, Math.min(H - 1, sz)), cell[0], cell[1]);
+  if (!cells) return null;
+  const pts = cells.map(([x, z]) => cw(x, z));
+  pts[0] = from.clone();
+  const out = [pts[0]];
+  let i = 0;
+  while (i < pts.length - 1) {
+    let j = pts.length - 1;
+    while (j > i + 1 && !lineClear(pts[i], pts[j])) j--;
+    out.push(pts[j]);
+    i = j;
+  }
+  return out.slice(1);
+}
+
+/* Faste plasser agenter kan reservere, så to ikke står på samme sted. */
+const spotOcc = new Map();
+const SPOTSET = new Set();
+const key = (c) => c[0] + "," + c[1];
+function regSpots(list) { for (const c of list) SPOTSET.add(key(c)); return list; }
+function nearFree(cell, from) {
+  let best = null, bd = Infinity;
+  for (let r = 1; r <= 3 && !best; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+    const x = cell[0] + dx, z = cell[1] + dz;
+    if (!free(x, z) || SPOTSET.has(x + "," + z)) continue;
+    const d = cw(x, z).distanceTo(from) * 0.3 + r;
+    if (d < bd) { bd = d; best = [x, z]; }
+  }
+  return best || cell;
+}
+function pickSpot(list, a) {
+  const ok = list.filter((c) => { const o = spotOcc.get(key(c)); return (!o || o === a) && free(c[0], c[1]); });
+  if (ok.length) {
+    ok.sort((p, q) => cw(...p).distanceTo(a.pos) - cw(...q).distanceTo(a.pos));
+    return ok[Math.random() < 0.7 ? 0 : Math.floor(Math.random() * ok.length)];
+  }
+  return nearFree(pick(list), a.pos);
+}
+
+/* =========================================================================
+   3. Planløsning for pengerommet
+   ========================================================================= */
+const MACHINE_Z = [3, 7, 11, 15];                  // tellemaskiner langs venstre vegg (x 0–1)
+const BELT = { x0: 5, x1: 28, z: 0 };              // transportbånd langs bakveggen
+const DOCK_CELLS = [[29, 0], [30, 0]];             // lasterampe ved enden av båndet
+const TABLE = { x0: 13, x1: 22, z0: 8, z1: 15 };   // bordet med pengefjellet
+const TOWERS = [[8, 4], [26, 4], [5, 17], [29, 17]]; // glasstårn (2x2)
+const CABINETS = [{ z0: 2, z1: 7 }, { z0: 16, z1: 21 }]; // glasshvelv langs høyre vegg (x 34–35)
+const DESKS = [9, 13, 21, 25], DESK_Z = 19;        // trading-terminaler (2 ruter brede)
+const HOLO = [[17, 20], [18, 20]];                 // strategibord
+const CART_HOME = [[29, 4], [30, 4], [31, 4]];
+const PILE_START = [[5, 21, true], [30, 21, false], [5, 9, false], [30, 13, true], [12, 3, false], [23, 4, false]];
+const ZONE_CELLS = [[1, 1], [1, 22], [33, 23], [11, 7], [24, 7], [11, 16], [24, 17], [17, 5], [3, 19], [29, 10], [19, 23]];
+
+const BELT_SPOTS = regSpots([[5, 1], [6, 1]]);
+const DOCK_SPOTS = regSpots([[29, 1], [30, 1]]);
+const DOOR_SPOTS = regSpots([[34, 11], [34, 12], [33, 13]]);
+const SHELF_SPOTS = regSpots([[33, 3], [33, 4], [33, 5], [33, 6], [33, 17], [33, 18], [33, 19], [33, 20]]);
+const MOUNTAIN_SPOTS = regSpots([[12, 10], [12, 13], [23, 10], [23, 13], [15, 7], [20, 7], [15, 16], [20, 16]]);
+const DESK_SPOTS = regSpots(DESKS.flatMap((x) => [[x, DESK_Z + 1], [x + 1, DESK_Z + 1]]));
+const HOLO_SPOTS = regSpots([[16, 20], [19, 20], [17, 21], [18, 21], [17, 19], [18, 19]]);
+
+const TABLE_C = rectC(TABLE.x0, TABLE.x1, TABLE.z0, TABLE.z1);
+const TABLE_HX = (TABLE.x1 - TABLE.x0 + 1) / 2 - 0.15, TABLE_HZ = (TABLE.z1 - TABLE.z0 + 1) / 2 - 0.15;
+const TT = 0.84;                          // bordplatehøyde
+const MRX = 4.3, MRZ = 3.3, MH = 2.7;     // pengefjellets radius og høyde
+const DR = 1.7, DOOR_X = W / 2 - 0.22, DOOR_Y = DR + 0.25, DOOR_Z = rectC(0, 0, 10, 13).z;
+const DOOR_LOOK = new THREE.Vector3(DOOR_X, 1, DOOR_Z);
+const DOOR_FRONT = new THREE.Vector3(DOOR_X - 1.6, 0, DOOR_Z);
+const BELT_START = new THREE.Vector3(cw(BELT.x0, 0).x - 0.5, 0.8, cw(0, BELT.z).z);
+const DOCK_C = rectC(29, 30, 0, 0);
+
+function buildLayout() {
+  for (const z of MACHINE_Z) for (let dz = 0; dz < 2; dz++) for (let x = 0; x < 2; x++) block(x, z + dz, 1.15);
+  for (let x = BELT.x0; x <= BELT.x1; x++) block(x, BELT.z, 0.78);
+  for (const [x, z] of DOCK_CELLS) block(x, z, 0.3);
+  for (let x = TABLE.x0; x <= TABLE.x1; x++) for (let z = TABLE.z0; z <= TABLE.z1; z++) block(x, z, TT);
+  for (const [x, z] of TOWERS) for (let dx = 0; dx < 2; dx++) for (let dz = 0; dz < 2; dz++) block(x + dx, z + dz, 7.2);
+  for (const c of CABINETS) for (let z = c.z0; z <= c.z1; z++) for (const x of [34, 35]) block(x, z, 2.5);
+  for (let z = 10; z <= 13; z++) block(35, z, 0);                // dørkarm
+  for (const x of [32, 33, 34]) block(x, 10, 0);                 // døra svinger hit
+  for (const x of DESKS) { block(x, DESK_Z, 0.8); block(x + 1, DESK_Z, 0.8); }
+  for (const [x, z] of HOLO) block(x, z, 0.85);
+}
+
+/* =========================================================================
+   4. Scene
+   ========================================================================= */
+const stage = document.getElementById("stage");
+const isMobile = matchMedia("(max-width: 820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const params = new URLSearchParams(location.search);
+const testCanvas = document.createElement("canvas");
+const hasGL = !!(testCanvas.getContext("webgl2") || testCanvas.getContext("webgl"));
+
+let renderer, scene, camera, controls, composer, bloom, tiltH, tiltV, labelRenderer, reflector;
+const clock = new THREE.Clock();
+const fx = { on: !isMobile && !params.has("lite"), labels: true, ui: true };
+const dummy = new THREE.Object3D();
+
+const TiltShift = {
+  uniforms: { tDiffuse: { value: null }, amount: { value: 1.7 }, focus: { value: 0.47 }, band: { value: 0.24 }, dir: { value: new THREE.Vector2(1, 0) }, res: { value: new THREE.Vector2(1, 1) } },
+  vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float amount, focus, band; uniform vec2 dir, res; varying vec2 vUv;
+    void main(){
+      float d = max(0.0, abs(vUv.y - focus) - band);
+      vec2 o = dir / res * clamp(d * 3.0, 0.0, 1.0) * amount;
+      vec4 c = texture2D(tDiffuse, vUv) * 0.2270270270;
+      c += texture2D(tDiffuse, vUv + o * 1.3846153846) * 0.3162162162;
+      c += texture2D(tDiffuse, vUv - o * 1.3846153846) * 0.3162162162;
+      c += texture2D(tDiffuse, vUv + o * 3.2307692308) * 0.0702702703;
+      c += texture2D(tDiffuse, vUv - o * 3.2307692308) * 0.0702702703;
+      gl_FragColor = c;
+    }`,
+};
+
+if (!hasGL) {
+  document.getElementById("fallback").classList.add("show");
+  document.getElementById("loading").style.opacity = 0;
+} else {
+  renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 1.75));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  stage.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color("#050404");
+  scene.fog = new THREE.Fog("#050404", 48, 90);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.42;
+
+  camera = new THREE.PerspectiveCamera(isMobile ? 55 : 38, innerWidth / innerHeight, 0.1, 220);
+  camera.position.set(-13, isMobile ? 34 : 25, isMobile ? 36 : 30);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(1, 0.6, 1.2);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 6;
+  controls.maxDistance = 70;
+  controls.maxPolarAngle = Math.PI * 0.46;
+
+  labelRenderer = new CSS2DRenderer({ element: document.getElementById("labels") });
+  labelRenderer.setSize(innerWidth, innerHeight);
+
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.6, 0.55, 0.62);
+  composer.addPass(bloom);
+  tiltH = new ShaderPass(TiltShift); tiltH.uniforms.dir.value.set(1, 0);
+  tiltV = new ShaderPass(TiltShift); tiltV.uniforms.dir.value.set(0, 1);
+  composer.addPass(tiltH); composer.addPass(tiltV);
+  composer.addPass(new OutputPass());
+  const setRes = () => { const pr = renderer.getPixelRatio(); for (const p of [tiltH, tiltV]) p.uniforms.res.value.set(innerWidth * pr, innerHeight * pr); };
+  setRes();
+
+  scene.add(new THREE.HemisphereLight("#8f7d5c", "#0a0806", 0.75));
+  const key = new THREE.DirectionalLight("#ffe2b0", 1.15);
+  key.position.set(-12, 30, 16);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight("#6fa8ff", 0.35);
+  rim.position.set(14, 12, -18);
+  scene.add(rim);
+
+  addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    composer.setSize(innerWidth, innerHeight);
+    labelRenderer.setSize(innerWidth, innerHeight);
+    setRes();
+  });
+}
+
+/* =========================================================================
+   5. Teksturer og materialer (fiktive sedler: "SIGAR · DEMO")
+   ========================================================================= */
+const TEX = {}, M = {}, G = {};
+function canvasTex(w, h, draw) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+function drawNote(x, w, h, band) {
+  const g = x.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, "#2a4d3c"); g.addColorStop(0.5, "#467353"); g.addColorStop(1, "#28483b");
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.strokeStyle = "rgba(225,205,140,.2)"; x.lineWidth = 1;
+  for (let k = 0; k < 7; k++) { x.beginPath(); for (let i = 0; i <= w; i += 4) { const y = h / 2 + Math.sin(i / 13 + k) * h * 0.3 * Math.cos(k * 0.7); i ? x.lineTo(i, y) : x.moveTo(i, y); } x.stroke(); }
+  x.strokeStyle = "#dcbb6a"; x.lineWidth = 4; x.strokeRect(5, 5, w - 10, h - 10);
+  x.lineWidth = 1.5; x.strokeRect(11, 11, w - 22, h - 22);
+  x.fillStyle = "rgba(220,187,106,.92)"; x.beginPath(); x.arc(w * 0.22, h / 2, h * 0.26, 0, 7); x.fill();
+  x.textAlign = "center"; x.textBaseline = "middle";
+  x.fillStyle = "#2c4f3e"; x.font = `bold ${h * 0.3}px Georgia,serif`; x.fillText("S", w * 0.22, h / 2 + 2);
+  x.fillStyle = "#f0e2b4"; x.font = `bold ${h * 0.34}px Georgia,serif`; x.fillText("100", w * 0.74, h * 0.42);
+  x.font = `${h * 0.12}px Georgia,serif`; x.fillText("SIGAR · DEMO", w * 0.6, h * 0.78);
+  if (band) {
+    x.fillStyle = "#efe3c2"; x.fillRect(w * 0.44, 0, w * 0.12, h);
+    x.fillStyle = "#b8913f"; x.fillRect(w * 0.44, 0, 3, h); x.fillRect(w * 0.56 - 3, 0, 3, h);
+    x.save(); x.translate(w / 2, h / 2); x.rotate(-Math.PI / 2); x.fillStyle = "#6b5320"; x.font = `bold ${h * 0.11}px Georgia`; x.fillText("10 000", 0, 0); x.restore();
+  }
+}
+function edgeStripes(x, w, h, band) {
+  for (let y = 0; y < h; y += 3) { x.fillStyle = (y / 3) % 2 ? "#ddd6bb" : "#4f7d5b"; x.fillRect(0, y, w, 3); }
+  if (band) { x.fillStyle = "#efe3c2"; x.fillRect(w * 0.44, 0, w * 0.12, h); x.fillStyle = "#b8913f"; x.fillRect(w * 0.44, 0, 3, h); x.fillRect(w * 0.56 - 3, 0, 3, h); }
+}
+function marbleTexture() {
+  const w = 2048, h = Math.round((2048 * H) / W), u = w / W;
+  return canvasTex(w, h, (x) => {
+    x.fillStyle = "#0b0a0c"; x.fillRect(0, 0, w, h);
+    // store plater
+    for (let i = 0; i < W; i += 3) for (let j = 0; j < H; j += 3) { x.fillStyle = `rgba(${20 + Math.random() * 10},${18 + Math.random() * 8},${18 + Math.random() * 8},.6)`; x.fillRect(i * u, j * u, 3 * u, 3 * u); }
+    // årer
+    x.filter = "blur(1.2px)";
+    for (let k = 0; k < 160; k++) {
+      let px = Math.random() * w, py = Math.random() * h, a = Math.random() * 6.28;
+      const gold = Math.random() < 0.18;
+      x.strokeStyle = gold ? `rgba(212,166,69,${rand(0.12, 0.3)})` : `rgba(210,200,185,${rand(0.03, 0.12)})`;
+      x.lineWidth = rand(0.6, gold ? 2 : 3.2);
+      x.beginPath(); x.moveTo(px, py);
+      for (let s = 0; s < 46; s++) { a += rand(-0.35, 0.35); px += Math.cos(a) * 16; py += Math.sin(a) * 16; x.lineTo(px, py); }
+      x.stroke();
+    }
+    x.filter = "none";
+    // fuger mellom platene
+    x.strokeStyle = "rgba(0,0,0,.65)"; x.lineWidth = 2;
+    for (let i = 0; i <= W; i += 3) { x.beginPath(); x.moveTo(i * u, 0); x.lineTo(i * u, h); x.stroke(); }
+    for (let j = 0; j <= H; j += 3) { x.beginPath(); x.moveTo(0, j * u); x.lineTo(w, j * u); x.stroke(); }
+    // gullinnlegg: ramme og ellipser rundt bordet
+    x.strokeStyle = "rgba(222,178,84,.85)"; x.lineWidth = 5;
+    x.strokeRect(0.6 * u, 0.6 * u, w - 1.2 * u, h - 1.2 * u);
+    x.lineWidth = 2; x.strokeRect(0.85 * u, 0.85 * u, w - 1.7 * u, h - 1.7 * u);
+    const cx = (TABLE_C.x + W / 2) * u, cy = (TABLE_C.z + H / 2) * u;
+    x.lineWidth = 6; x.beginPath(); x.ellipse(cx, cy, 7.6 * u, 6.2 * u, 0, 0, 7); x.stroke();
+    x.lineWidth = 2; x.beginPath(); x.ellipse(cx, cy, 8.1 * u, 6.7 * u, 0, 0, 7); x.stroke();
+    for (let i = 0; i < 16; i++) { const a = (i / 16) * 6.283; x.beginPath(); x.moveTo(cx + Math.cos(a) * 7.6 * u, cy + Math.sin(a) * 6.2 * u); x.lineTo(cx + Math.cos(a) * 8.6 * u, cy + Math.sin(a) * 7.2 * u); x.stroke(); }
+    // markering av dørsvinget
+    x.strokeStyle = "rgba(222,178,84,.5)"; x.setLineDash([10, 8]); x.lineWidth = 3;
+    x.beginPath(); x.arc(W * u, (DOOR_Z - DR + H / 2) * u, 2 * DR * u, Math.PI / 2, Math.PI); x.stroke(); x.setLineDash([]);
+  });
+}
+function glowSprite() {
+  return canvasTex(64, 64, (x) => { const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, "rgba(255,240,200,1)"); g.addColorStop(0.3, "rgba(255,200,110,.6)"); g.addColorStop(1, "rgba(255,180,80,0)"); x.fillStyle = g; x.fillRect(0, 0, 64, 64); });
+}
+function vaultInterior() {
+  return canvasTex(256, 256, (x) => {
+    const g = x.createRadialGradient(128, 128, 10, 128, 128, 128); g.addColorStop(0, "#ffdf9a"); g.addColorStop(0.5, "#b97a22"); g.addColorStop(1, "#1a1006");
+    x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+    for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) { x.fillStyle = (r + c) % 2 ? "rgba(255,214,120,.85)" : "rgba(230,180,80,.75)"; x.fillRect(30 + c * 28, 60 + r * 24, 24, 16); }
+  });
+}
+function beamMat(color, opacity) {
+  return new THREE.ShaderMaterial({
+    uniforms: { color: { value: new THREE.Color(color) }, opacity: { value: opacity } },
+    vertexShader: "varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }",
+    fragmentShader: "uniform vec3 color; uniform float opacity; varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ float f = abs(dot(vN, vV)); float a = opacity * pow(f, 1.6) * (0.12 + 0.88 * vUv.y); gl_FragColor = vec4(color, a); }",
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+}
+const matCache = new Map();
+function mat(color, rough = 0.6, metal = 0.1) {
+  const k = color + rough + metal;
+  if (!matCache.has(k)) matCache.set(k, new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal }));
+  return matCache.get(k);
+}
+function emissive(color, intensity = 1.6) { return new THREE.MeshStandardMaterial({ color: "#000", emissive: color, emissiveIntensity: intensity }); }
+
+function initMaterials() {
+  TEX.note = canvasTex(256, 120, (x, w, h) => drawNote(x, w, h, false));
+  TEX.bundleTop = canvasTex(256, 120, (x, w, h) => drawNote(x, w, h, true));
+  TEX.bundleSide = canvasTex(256, 64, (x, w, h) => edgeStripes(x, w, h, true));
+  TEX.bundleEnd = canvasTex(64, 64, (x, w, h) => edgeStripes(x, w, h, false));
+  TEX.glow = glowSprite();
+  const bm = (map) => new THREE.MeshStandardMaterial({ map, roughness: 0.75, metalness: 0, emissive: "#ffffff", emissiveMap: map, emissiveIntensity: 0.1 });
+  const end = bm(TEX.bundleEnd), top = bm(TEX.bundleTop), side = bm(TEX.bundleSide);
+  M.bundle = [end, end, top, top, side, side];
+  G.bundle = new THREE.BoxGeometry(0.34, 0.1, 0.16);
+  M.gold = new THREE.MeshStandardMaterial({ color: "#d9ab4c", metalness: 1, roughness: 0.26 });
+  M.goldDark = new THREE.MeshStandardMaterial({ color: "#9c7a34", metalness: 1, roughness: 0.4 });
+  M.steel = new THREE.MeshStandardMaterial({ color: "#8d8f96", metalness: 1, roughness: 0.3 });
+  M.metal = new THREE.MeshStandardMaterial({ color: "#1b1917", metalness: 0.8, roughness: 0.38 });
+  M.wall = new THREE.MeshStandardMaterial({ color: "#141113", metalness: 0.45, roughness: 0.55 });
+  M.panel = new THREE.MeshStandardMaterial({ color: "#1c1714", metalness: 0.5, roughness: 0.45 });
+  M.black = new THREE.MeshStandardMaterial({ color: "#0b0a0a", metalness: 0.6, roughness: 0.18 });
+  M.glass = new THREE.MeshStandardMaterial({ color: "#a8c4d8", metalness: 0.9, roughness: 0.05, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide });
+  M.lampGold = emissive("#ffc76b", 2.6);
+  M.lampBlue = emissive("#5fb4ff", 2.2);
+  M.lampGreen = emissive("#3ee09a", 2.2);
+  M.lampAmber = emissive("#ffb347", 2.6);
+  M.shadow = new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.5, depthWrite: false });
+}
+
+/* =========================================================================
+   6. Bygg rommet
+   ========================================================================= */
+const animated = []; // (t, dt) hver frame
+const screens = [];  // canvas-skjermer som tegnes på nytt
+const machines = [], carts = [], zones = [], piles = [];
+const IM = {};       // instanserte bunter: hyller, tårn, fjell, rampe, hauger, bånd, gulvsedler
+const door = { open: 0, msgAt: -99 };
+let floorMat;
+
+function makeScreen(w, h, draw) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = { ctx: c.getContext("2d"), tex, w, h, draw, off: Math.random() * 100, data: [] };
+  screens.push(s);
+  return s;
+}
+function holoMat(tex, opacity = 0.9) { return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }); }
+
+function addLabel(text, pos) {
+  const el = document.createElement("div");
+  el.className = "room3d"; el.textContent = text;
+  const o = new CSS2DObject(el); o.position.copy(pos); scene.add(o);
+}
+
+function buildRoom() {
+  // Speilblankt marmorgulv: refleksjon under, halvgjennomsiktig marmor over
+  const floorGeo = new THREE.PlaneGeometry(W, H);
+  if (!isMobile) {
+    const pr = Math.min(devicePixelRatio, 1.5);
+    reflector = new Reflector(floorGeo, { clipBias: 0.003, textureWidth: innerWidth * pr * 0.6, textureHeight: innerHeight * pr * 0.6, color: "#b9b3a8" });
+    reflector.rotation.x = -Math.PI / 2; reflector.position.y = -0.004;
+    scene.add(reflector);
+  }
+  floorMat = new THREE.MeshStandardMaterial({ map: marbleTexture(), roughness: 0.16, metalness: 0.25, transparent: true, opacity: 0.8 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2; floor.renderOrder = -1;
+  scene.add(floor);
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(W + 30, H + 30), M.black);
+  base.rotation.x = -Math.PI / 2; base.position.y = -0.03; scene.add(base);
+
+  // Vegger: høye bak og til høyre, lave foran og til venstre så kameraet ser inn
+  const WH = 6.2, hx = W / 2, hz = H / 2;
+  const wall = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M.wall); m.position.set(x, y, z); scene.add(m); return m; };
+  wall(W + 0.8, WH, 0.4, 0, WH / 2, -hz - 0.2);
+  wall(0.4, WH, H + 0.8, hx + 0.2, WH / 2, 0);
+  wall(0.3, 0.55, H + 0.6, -hx - 0.15, 0.275, 0);
+  wall(W + 0.6, 0.55, 0.3, 0, 0.275, hz + 0.15);
+  const trim = (w, h, d, x, y, z, m = M.gold) => { const t = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); t.position.set(x, y, z); scene.add(t); return t; };
+  for (const y of [0.18, 3.05, WH - 0.15]) { trim(W + 0.8, y === 3.05 ? 0.04 : 0.1, 0.06, 0, y, -hz + 0.03); trim(0.06, y === 3.05 ? 0.04 : 0.1, H + 0.8, hx - 0.03, y, 0); }
+  trim(0.36, 0.06, H + 0.6, -hx - 0.15, 0.58, 0); trim(W + 0.6, 0.06, 0.36, 0, 0.58, hz + 0.15);
+  // Søyler, lamper og paneler
+  const sconces = [];
+  for (let x = -hx + 2; x <= hx - 1; x += 4) { trim(0.3, WH, 0.12, x, WH / 2, -hz + 0.06, M.goldDark); sconces.push([x + 2, 4.3, -hz + 0.18]); }
+  for (let z = -hz + 2; z <= hz - 1; z += 4) { if (Math.abs(z - DOOR_Z) < 2.4) continue; trim(0.12, WH, 0.3, hx - 0.06, WH / 2, z, M.goldDark); sconces.push([hx - 0.18, 4.3, z + 2]); }
+  const sg = new THREE.SphereGeometry(0.09, 12, 8);
+  const sconceIM = new THREE.InstancedMesh(sg, M.lampGold, sconces.length);
+  sconces.forEach((p, i) => { dummy.position.set(...p); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1.6, 1); dummy.updateMatrix(); sconceIM.setMatrixAt(i, dummy.matrix); });
+  scene.add(sconceIM);
+  // Lys i gulvlistene
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(W, 0.03, 0.03), M.lampAmber); strip.position.set(0, 0.32, -hz + 0.05); scene.add(strip);
+  const strip2 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, H), M.lampAmber); strip2.position.set(hx - 0.05, 0.32, 0); scene.add(strip2);
+
+  // Hengelamper
+  const shade = new THREE.ConeGeometry(0.35, 0.3, 20, 1, true), bulb = new THREE.SphereGeometry(0.12, 12, 8), cable = new THREE.CylinderGeometry(0.01, 0.01, 6, 4);
+  for (const [x, z] of [[-11, -6], [-11, 6], [11, -6], [11, 6], [0, -9], [0, 9.5]]) {
+    const s = new THREE.Mesh(shade, M.gold); s.position.set(x, 6.4, z); scene.add(s);
+    const b = new THREE.Mesh(bulb, M.lampGold); b.position.set(x, 6.25, z); scene.add(b);
+    const c = new THREE.Mesh(cable, M.metal); c.position.set(x, 9.5, z); scene.add(c);
+  }
+
+  // Lys
+  const pl = (c, i, d, x, y, z) => { const l = new THREE.PointLight(c, i, d, 1.5); l.position.set(x, y, z); scene.add(l); return l; };
+  pl("#ffc66d", 55, 24, 0, 6.5, 0);
+  pl("#ffbe5c", 22, 14, 14.5, 4, DOOR_Z);
+  pl("#5fb4ff", 18, 14, 0, 3, 8.5);
+  pl("#ffd27a", 16, 13, -14.5, 3.5, -2);
+  pl("#ffb347", 12, 14, 6, 3.5, -9.5);
+
+  buildMachines();
+  buildBelt();
+  buildTable();
+  buildVault();
+  buildTowers();
+  buildDesks();
+  buildCarts();
+  buildZones();
+  buildHolos();
+  buildParticles();
+
+  addLabel("Tellemaskiner", new THREE.Vector3(-15.8, 2.6, -1.5));
+  addLabel("Hvelvet", new THREE.Vector3(DOOR_X - 0.4, 4.4, DOOR_Z));
+  addLabel("Trading", new THREE.Vector3(0, 2.6, 7.3));
+  addLabel("Transportbånd", new THREE.Vector3(-6, 1.7, -11.4));
+  addLabel("Lasterampe", new THREE.Vector3(DOCK_C.x, 1.6, DOCK_C.z));
+}
+
+/* --- Tellemaskiner --- */
+function drawMachineScreen(s) {
+  const { ctx, w, h } = s, m = s.machine;
+  ctx.fillStyle = "#050806"; ctx.fillRect(0, 0, w, h);
+  const busy = m.counting > 0;
+  ctx.fillStyle = busy ? "#ffb347" : "#3ee09a"; ctx.font = "bold 15px monospace"; ctx.textAlign = "left";
+  ctx.fillText(busy ? "TELLER" : m.hopper > 0 ? "I KØ" : "KLAR", 8, 20);
+  ctx.fillStyle = "#f6efe0"; ctx.font = "bold 22px monospace";
+  const shown = busy ? m.amount * (1 - m.counting / m.total) : m.hopper;
+  ctx.fillText("$" + nf.format(Math.round(shown)), 8, 48);
+  ctx.fillStyle = "rgba(232,192,106,.6)"; ctx.fillRect(8, 56, (w - 16) * (busy ? 1 - m.counting / m.total : 0), 4);
+  s.tex.needsUpdate = true;
+}
+function buildMachines() {
+  const body = new THREE.BoxGeometry(1.5, 0.9, 1.6), band = new THREE.BoxGeometry(1.53, 0.05, 1.63), glass = new THREE.BoxGeometry(0.8, 0.28, 1.0);
+  const roller = new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), stack = new THREE.BoxGeometry(0.62, 0.3, 0.84), slot = new THREE.BoxGeometry(0.03, 0.07, 0.95);
+  const noteGeo = new THREE.PlaneGeometry(0.3, 0.14), lamp = new THREE.SphereGeometry(0.07, 10, 8);
+  const noteMat = new THREE.MeshStandardMaterial({ map: TEX.note, side: THREE.DoubleSide, emissive: "#fff", emissiveMap: TEX.note, emissiveIntensity: 0.25 });
+  const stackMat = [M.bundle[0], M.bundle[0], M.bundle[2], M.bundle[2], M.bundle[4], M.bundle[4]];
+  MACHINE_Z.forEach((z, i) => {
+    const c = rectC(0, 1, z, z + 1);
+    const g = new THREE.Group(); g.position.copy(c); scene.add(g);
+    const b = new THREE.Mesh(body, M.metal); b.position.y = 0.45; g.add(b);
+    for (const y of [0.04, 0.9]) { const t = new THREE.Mesh(band, M.gold); t.position.y = y; g.add(t); }
+    const gl = new THREE.Mesh(glass, M.glass); gl.position.set(-0.25, 1.04, 0); g.add(gl);
+    const st = new THREE.Mesh(stack, stackMat); st.position.set(-0.25, 0.92, 0); g.add(st);
+    const rollers = [0.12, 0.32].map((x) => { const r = new THREE.Mesh(roller, M.steel); r.rotation.x = Math.PI / 2; r.position.set(x, 0.98, 0); g.add(r); return r; });
+    const sl = new THREE.Mesh(slot, M.lampAmber); sl.position.set(0.76, 0.55, 0); g.add(sl);
+    const flick = [0, 1, 2].map((k) => { const n = new THREE.Mesh(noteGeo, noteMat); n.rotation.set(-Math.PI / 2, 0, Math.PI / 2); n.position.set(0.85, 0.56, 0); n.visible = false; g.add(n); return n; });
+    const scr = makeScreen(128, 64, drawMachineScreen);
+    const sm = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.35), new THREE.MeshBasicMaterial({ map: scr.tex, toneMapped: false }));
+    sm.position.set(0.5, 1.28, 0); sm.rotation.y = Math.PI / 2; sm.rotation.x = 0; g.add(sm);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.42, 0.78), M.gold); frame.position.set(0.48, 1.28, 0); g.add(frame);
+    const lm = new THREE.Mesh(lamp, M.lampGreen.clone()); lm.position.set(-0.6, 1.0, 0.65); g.add(lm);
+    const m = { i, z, center: c.clone().setY(0.8), spot: [2, z], drop: [2, z + 1], hopper: rand(0, 2) * BUNDLE, operator: null, counting: 0, total: 1, amount: 0, rollers, flick, stack: st, lamp: lm };
+    regSpots([m.spot, m.drop]);
+    m.start = (v, secs) => { m.amount = v; m.counting = secs; m.total = secs; };
+    scr.machine = m;
+    machines.push(m);
+  });
+  animated.push((t, dt) => {
+    for (const m of machines) {
+      const busy = m.counting > 0;
+      if (busy) m.counting = Math.max(0, m.counting - dt);
+      for (const r of m.rollers) r.rotation.y += dt * (busy ? 28 : 0);
+      m.flick.forEach((n, k) => { n.visible = busy; if (busy) { const ph = (t * 3 + k / 3) % 1; n.position.x = 0.8 + ph * 0.35; n.position.y = 0.56 + Math.sin(ph * Math.PI) * 0.12; n.rotation.y = ph * 0.6; } });
+      m.stack.scale.y = Math.max(0.05, Math.min(1, m.hopper / (3 * BUNDLE)));
+      m.stack.position.y = 0.92 - 0.15 * (1 - m.stack.scale.y);
+      m.lamp.material.emissive.set(busy ? "#ffb347" : "#3ee09a");
+      m.lamp.material.emissiveIntensity = busy ? 2 + Math.sin(t * 14) : 2;
+    }
+  });
+}
+
+/* --- Transportbånd og lasterampe --- */
+const belt = {
+  items: [], pending: [], speed: 1.15, gap: 0.62, x0: 0, x1: 0, z: 0,
+  add(v) { this.pending.push(v); },
+  total() { let s = 0; for (const i of this.items) s += i.v; for (const v of this.pending) s += v; return s; },
+  count() { return this.items.length + this.pending.length; },
+  update(dt) {
+    const L = this.x1 - this.x0;
+    for (let i = 0; i < this.items.length; i++) { const it = this.items[i]; const max = i === 0 ? L : this.items[i - 1].d - this.gap; it.d = Math.max(it.d, Math.min(max, it.d + this.speed * dt)); }
+    if (this.items.length && this.items[0].d >= L - 0.02 && dock.count < dock.cap) dock.add(this.items.shift().v);
+    if (this.pending.length && (!this.items.length || this.items[this.items.length - 1].d > this.gap)) this.items.push({ d: 0, v: this.pending.shift(), r: rand(-0.25, 0.25) });
+  },
+};
+const dock = {
+  count: 0, value: 0, cap: 36,
+  add(v) { this.count++; this.value += v; },
+  take(k) { k = Math.min(k, this.count); const v = this.count ? (this.value * k) / this.count : 0; this.count -= k; this.value -= v; return { k, v }; },
+};
+function buildBelt() {
+  belt.x0 = cw(BELT.x0, 0).x - 0.5; belt.x1 = cw(BELT.x1, 0).x + 0.5; belt.z = cw(0, BELT.z).z;
+  const L = belt.x1 - belt.x0, cx = (belt.x0 + belt.x1) / 2;
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(L, 0.68, 0.8), M.metal); frame.position.set(cx, 0.34, belt.z); scene.add(frame);
+  const tex = canvasTex(64, 32, (x, w, h) => { x.fillStyle = "#161412"; x.fillRect(0, 0, w, h); x.fillStyle = "#2c2824"; x.fillRect(0, 0, 6, h); x.fillStyle = "rgba(232,192,106,.35)"; x.fillRect(30, 0, 2, h); });
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(L * 2, 1);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.62), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.3 }));
+  top.rotation.x = -Math.PI / 2; top.position.set(cx, 0.69, belt.z); scene.add(top);
+  for (const dz of [-0.36, 0.36]) { const r = new THREE.Mesh(new THREE.BoxGeometry(L, 0.06, 0.05), M.gold); r.position.set(cx, 0.73, belt.z + dz); scene.add(r); }
+  const lite = new THREE.Mesh(new THREE.BoxGeometry(L, 0.02, 0.02), M.lampAmber); lite.position.set(cx, 0.36, belt.z + 0.41); scene.add(lite);
+  animated.push((t, dt) => { tex.offset.x -= (belt.speed * dt * tex.repeat.x) / L; });
+  // Innskuddsluke i veggen der nye bunter kommer ut
+  const hatch = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 0.1), M.gold); hatch.position.set(belt.x0 + 0.55, 1.1, -H / 2 + 0.06); scene.add(hatch);
+  const hole = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6), M.lampAmber); hole.position.set(belt.x0 + 0.55, 1.1, -H / 2 + 0.12); scene.add(hole);
+  // Rampe
+  const ramp = new THREE.Mesh(new THREE.BoxGeometry(2, 0.12, 1), M.metal); ramp.position.set(DOCK_C.x, 0.06, DOCK_C.z); scene.add(ramp);
+  const rampT = new THREE.Mesh(new THREE.BoxGeometry(2.04, 0.03, 1.04), M.gold); rampT.position.set(DOCK_C.x, 0.13, DOCK_C.z); scene.add(rampT);
+  // Instanser for bunter på båndet og rampa
+  IM.belt = new THREE.InstancedMesh(G.bundle, M.bundle, 60);
+  IM.belt.instanceMatrix.setUsage(THREE.DynamicDrawUsage); IM.belt.frustumCulled = false; IM.belt.count = 0; scene.add(IM.belt);
+  const dockSlots = [];
+  for (let l = 0; l < 4; l++) for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) dockSlots.push([DOCK_C.x - 0.55 + a * 0.55 + rand(-0.04, 0.04), 0.21 + l * 0.13, DOCK_C.z - 0.25 + b * 0.25, rand(-0.15, 0.15)]);
+  IM.dock = staticIM(dockSlots.map(([x, y, z, r]) => [x, y, z, 0, r, 0, 1.3]));
+}
+function staticIM(slots) {
+  const im = new THREE.InstancedMesh(G.bundle, M.bundle, slots.length);
+  slots.forEach(([x, y, z, rx, ry, rz, s], i) => { dummy.position.set(x, y, z); dummy.rotation.set(rx, ry, rz); dummy.scale.setScalar(s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
+  im.computeBoundingSphere();
+  im.count = 0;
+  scene.add(im);
+  return im;
+}
+
+/* --- Bordet, pengefjellet og takringen med pengefossen --- */
+const mountain = { slots: [], topY: 0 };
+function buildTable() {
+  const c = TABLE_C, w = TABLE.x1 - TABLE.x0 + 1 - 0.2, d = TABLE.z1 - TABLE.z0 + 1 - 0.2;
+  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), M.black); top.position.set(c.x, TT - 0.06, c.z); scene.add(top);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, 0.05, d + 0.12), M.gold); edge.position.set(c.x, TT - 0.11, c.z); scene.add(edge);
+  const skirt = new THREE.Mesh(new THREE.BoxGeometry(w - 0.6, TT - 0.2, d - 0.6), M.metal); skirt.position.set(c.x, (TT - 0.2) / 2, c.z); scene.add(skirt);
+  const glow = new THREE.Mesh(new THREE.BoxGeometry(w - 0.55, 0.03, d - 0.55), M.lampGold); glow.position.set(c.x, 0.05, c.z); scene.add(glow);
+  // Fjellet: bunter lagvis i en paraboloide. Antallet som vises følger pengene på bordet.
+  for (let l = 0; l * 0.15 < MH; l++) {
+    const y = l * 0.15, s = Math.sqrt(1 - y / MH);
+    const layer = [];
+    for (let x = -MRX; x <= MRX; x += 0.55) for (let z = -MRZ; z <= MRZ; z += 0.42) {
+      const px = x + rand(-0.12, 0.12) + (l % 2) * 0.2, pz = z + rand(-0.1, 0.1);
+      if ((px / (MRX * s)) ** 2 + (pz / (MRZ * s)) ** 2 > 1) continue;
+      layer.push([c.x + px, TT + 0.075 + y, c.z + pz, rand(-0.12, 0.12), rand(0, 6.28), rand(-0.12, 0.12), 1.5]);
+    }
+    layer.sort(() => Math.random() - 0.5);
+    for (const s2 of layer) mountain.slots.push(s2);
+  }
+  IM.mountain = staticIM(mountain.slots);
+  // Takringen
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.7, 0.2, 14, 72), M.gold); ring.rotation.x = Math.PI / 2; ring.position.set(c.x, RING_Y, c.z); scene.add(ring);
+  const inner = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.06, 8, 72), M.lampGold); inner.rotation.x = Math.PI / 2; inner.position.set(c.x, RING_Y - 0.15, c.z); scene.add(inner);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(3.5, 48), new THREE.MeshBasicMaterial({ color: "#ffbf5e", transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })); disc.rotation.x = Math.PI / 2; disc.position.set(c.x, RING_Y - 0.1, c.z); scene.add(disc);
+  const nozG = new THREE.SphereGeometry(0.1, 10, 8), noz = new THREE.Group(); noz.position.set(c.x, RING_Y - 0.22, c.z); scene.add(noz);
+  for (let i = 0; i < 16; i++) { const n = new THREE.Mesh(nozG, M.lampGold); const a = (i / 16) * 6.283; n.position.set(Math.cos(a) * 3.1, 0, Math.sin(a) * 3.1); noz.add(n); }
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * 6.283 + 0.4; const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 8, 6), M.goldDark); cab.position.set(c.x + Math.cos(a) * 3.7, RING_Y + 4, c.z + Math.sin(a) * 3.7); scene.add(cab); }
+  M.beams = [];
+  const cone = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 4.6, RING_Y - TT, 40, 1, true), beamMat("#ffc66d", 0.16));
+  cone.position.set(c.x, (RING_Y + TT) / 2, c.z); scene.add(cone); M.beams.push(cone);
+  animated.push((t) => { noz.rotation.y = t * 0.25; disc.material.opacity = 0.15 + Math.sin(t * 2) * 0.04; });
+}
+function mountainSurface(x, z) {
+  const nx = (x - TABLE_C.x) / MRX, nz = (z - TABLE_C.z) / MRZ, r2 = nx * nx + nz * nz;
+  if (r2 >= 1) return TT + 0.01;
+  return TT + Math.min(MH * (1 - r2), mountain.topY) + 0.03;
+}
+
+/* --- Hvelvet: rund gulldør og glasskap med hyller --- */
+function buildVault() {
+  // Bakplate, karm og innsiden som synes når døra står åpen
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.4, 4.4), M.panel); plate.position.set(W / 2 - 0.05, DOOR_Y, DOOR_Z); scene.add(plate);
+  const inside = new THREE.Mesh(new THREE.CircleGeometry(DR - 0.05, 48), new THREE.MeshStandardMaterial({ color: "#000", emissive: "#ffffff", emissiveMap: vaultInterior(), emissiveIntensity: 0.3 }));
+  inside.rotation.y = -Math.PI / 2; inside.position.set(W / 2 - 0.11, DOOR_Y, DOOR_Z); scene.add(inside);
+  const frame = new THREE.Mesh(new THREE.TorusGeometry(DR + 0.14, 0.16, 16, 72), M.gold); frame.rotation.y = Math.PI / 2; frame.position.set(W / 2 - 0.14, DOOR_Y, DOOR_Z); scene.add(frame);
+  // Døra henger i et hengsel på den ene siden
+  const pivot = new THREE.Group(); pivot.position.set(DOOR_X, DOOR_Y, DOOR_Z - DR - 0.06); scene.add(pivot);
+  const dg = new THREE.Group(); dg.position.set(0, 0, DR + 0.06); pivot.add(dg);
+  const disk = new THREE.Mesh(new THREE.CylinderGeometry(DR, DR, 0.36, 56), M.gold); disk.rotation.z = Math.PI / 2; dg.add(disk);
+  const face = new THREE.Mesh(new THREE.CylinderGeometry(DR - 0.18, DR - 0.18, 0.38, 56), M.steel); face.rotation.z = Math.PI / 2; dg.add(face);
+  for (const r of [1.25, 0.8]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.045, 10, 56), M.gold); ring.rotation.y = Math.PI / 2; ring.position.x = -0.2; dg.add(ring); }
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.2, 24), M.gold); hub.rotation.z = Math.PI / 2; hub.position.x = -0.28; dg.add(hub);
+  const wheel = new THREE.Group(); wheel.position.x = -0.42; dg.add(wheel);
+  const wr = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.05, 10, 40), M.gold); wr.rotation.y = Math.PI / 2; wheel.add(wr);
+  for (let i = 0; i < 3; i++) { const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.3, 8), M.gold); sp.rotation.x = (i / 3) * Math.PI; wheel.add(sp); }
+  const bolts = [];
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * 6.283, b = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.4, 8), M.steel);
+    b.position.set(0, Math.cos(a) * (DR + 0.05), Math.sin(a) * (DR + 0.05)); b.rotation.x = -a; dg.add(b); bolts.push(b);
+  }
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), M.lampGreen.clone()); lamp.position.set(W / 2 - 0.2, DOOR_Y + DR + 0.5, DOOR_Z); scene.add(lamp);
+  Object.assign(door, { pivot, wheel, bolts, inside, lamp });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 2.2, 6, 32, 1, true), beamMat("#ffbe5c", 0.1)); beam.position.set(DOOR_X - 1.2, 3, DOOR_Z); scene.add(beam); M.beams.push(beam);
+
+  // Glasskap med hyller
+  const shelfSlots = [];
+  for (const cab of CABINETS) {
+    const zc = rectC(0, 0, cab.z0, cab.z1).z, len = cab.z1 - cab.z0 + 1, xc = rectC(34, 35, 0, 0).x;
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.5, len), M.panel); back.position.set(W / 2 - 0.08, 1.25, zc); scene.add(back);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, len), M.metal); roof.position.set(xc, 2.45, zc); scene.add(roof);
+    const roofT = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.03, len + 0.02), M.gold); roofT.position.set(xc, 2.51, zc); scene.add(roofT);
+    for (const z of [zc - len / 2, zc, zc + len / 2]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.5, 0.08), M.gold); p.position.set(xc - 0.98, 1.25, z); scene.add(p); }
+    const levels = [0.08, 0.66, 1.24, 1.82];
+    for (const y of levels) {
+      const sh = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.04, len - 0.1), M.metal); sh.position.set(xc, y, zc); scene.add(sh);
+      const lt = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.02, len - 0.1), M.lampGold); lt.position.set(xc - 0.93, y + 0.03, zc); scene.add(lt);
+    }
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(len, 2.4), M.glass); glass.rotation.y = -Math.PI / 2; glass.position.set(xc - 1.0, 1.25, zc); scene.add(glass);
+    const n = Math.floor((len - 0.4) / 0.4);
+    levels.forEach((y, li) => { for (let d = 0; d < 3; d++) for (let k = 0; k < 2; k++) for (let j = 0; j < n; j++) shelfSlots.push({ d, k, j, li, s: [xc - 0.55 + d * 0.5, y + 0.07 + k * 0.1, zc - len / 2 + 0.4 + j * 0.4, 0, Math.PI / 2 + rand(-0.06, 0.06), 0, 1] }); });
+  }
+  shelfSlots.sort((a, b) => a.d - b.d || a.k - b.k || a.j - b.j || a.li - b.li);
+  IM.shelves = staticIM(shelfSlots.map((o) => o.s));
+  IM.shelves.userData.cap = shelfSlots.length;
+}
+
+/* --- Glasstårn med bunter helt opp mot taket --- */
+const TOWER_BASE = 220;
+function buildTowers() {
+  const slots = [], cyl = new THREE.CylinderGeometry(0.66, 0.66, 7, 32, 1, true), base = new THREE.CylinderGeometry(0.8, 0.86, 0.26, 32), cap = new THREE.TorusGeometry(0.68, 0.05, 8, 32);
+  const centers = TOWERS.map(([x, z]) => rectC(x, x + 1, z, z + 1));
+  for (const c of centers) {
+    const g = new THREE.Mesh(cyl, M.glass); g.position.set(c.x, 3.76, c.z); scene.add(g);
+    const b = new THREE.Mesh(base, M.gold); b.position.set(c.x, 0.13, c.z); scene.add(b);
+    const tp = new THREE.Mesh(cap, M.gold); tp.rotation.x = Math.PI / 2; tp.position.set(c.x, 7.26, c.z); scene.add(tp);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.025, 6, 32), M.lampGold); ring.rotation.x = Math.PI / 2; ring.position.set(c.x, 0.3, c.z); scene.add(ring);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.1, 7.5, 24, 1, true), beamMat("#ffcf7a", 0.07)); beam.position.set(c.x, 3.8, c.z); scene.add(beam); M.beams.push(beam);
+  }
+  for (let l = 0; l < 40; l++) centers.forEach((c) => {
+    const rot = l % 2 ? Math.PI / 2 : 0, y = 0.34 + l * 0.16;
+    for (const o of [-0.13, 0.13]) { const ox = rot ? o : 0, oz = rot ? 0 : o; slots.push([c.x + ox, y, c.z + oz, 0, rot + rand(-0.04, 0.04), 0, 1.6]); }
+  });
+  IM.towers = staticIM(slots);
+  IM.towers.userData.cap = slots.length;
+}
+
+/* --- Trading-terminaler og strategibord --- */
+function drawChart(s, t) {
+  const { ctx, w, h } = s;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(10,30,60,.55)"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(95,180,255,.9)"; ctx.lineWidth = 2; ctx.strokeRect(2, 2, w - 4, h - 4);
+  if (!s.data.length) { let v = 50; for (let i = 0; i < 50; i++) { v += rand(-3, 3.2); s.data.push(v); } }
+  if (!sim.paused) { s.data.push(s.data[s.data.length - 1] + rand(-3, 3.3)); if (s.data.length > 50) s.data.shift(); }
+  const mn = Math.min(...s.data), mx = Math.max(...s.data), rg = mx - mn || 1;
+  ctx.globalAlpha = 0.3; ctx.strokeStyle = "#5fb4ff"; ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(0, (h * i) / 4); ctx.lineTo(w, (h * i) / 4); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  s.data.forEach((v, i) => { if (!i) return; const X = 10 + (i / 49) * (w - 20), Y = h - 14 - ((v - mn) / rg) * (h - 40); const up = v >= s.data[i - 1]; ctx.fillStyle = up ? "#3ee09a" : "#ff5d6c"; ctx.fillRect(X - 1.5, Y - 3, 3, 6 + Math.abs(v - s.data[i - 1])); });
+  ctx.strokeStyle = "#e8c06a"; ctx.lineWidth = 2; ctx.beginPath();
+  s.data.forEach((v, i) => { const X = 10 + (i / 49) * (w - 20), Y = h - 14 - ((v - mn) / rg) * (h - 40); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke();
+  ctx.fillStyle = "#cfe6ff"; ctx.font = "bold 14px monospace"; ctx.fillText("SIMULERT MARKED", 10, 20);
+  s.tex.needsUpdate = true;
+}
+const deskLooks = new Map();
+function buildDesks() {
+  const top = new THREE.BoxGeometry(1.8, 0.06, 0.8), edge = new THREE.BoxGeometry(1.84, 0.03, 0.84), leg = new THREE.BoxGeometry(1.6, 0.74, 0.5);
+  for (const x of DESKS) {
+    const c = rectC(x, x + 1, DESK_Z, DESK_Z);
+    const t = new THREE.Mesh(top, M.black); t.position.set(c.x, 0.77, c.z); scene.add(t);
+    const e = new THREE.Mesh(edge, M.gold); e.position.set(c.x, 0.73, c.z); scene.add(e);
+    const l = new THREE.Mesh(leg, M.metal); l.position.set(c.x, 0.37, c.z - 0.05); scene.add(l);
+    const kb = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.02, 0.2), M.lampBlue); kb.position.set(c.x, 0.81, c.z + 0.2); scene.add(kb);
+    const scr = makeScreen(256, 150, drawChart);
+    const sm = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.0), holoMat(scr.tex, 0.95)); sm.position.set(c.x, 1.55, c.z - 0.2); sm.rotation.x = -0.12; scene.add(sm);
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.03, 0.03), M.gold); fr.position.set(c.x, 1.03, c.z - 0.16); scene.add(fr);
+    deskLooks.set(key([x, DESK_Z + 1]), c.clone().setY(1)); deskLooks.set(key([x + 1, DESK_Z + 1]), c.clone().setY(1));
+  }
+  const hc = rectC(17, 18, 20, 20);
+  const tbl = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.7, 0.8, 32), M.black); tbl.position.set(hc.x, 0.4, hc.z); scene.add(tbl);
+  const tr = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.035, 8, 40), M.gold); tr.rotation.x = Math.PI / 2; tr.position.set(hc.x, 0.8, hc.z); scene.add(tr);
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.05, 32), new THREE.MeshBasicMaterial({ color: "#ffd27a", wireframe: true, transparent: true, opacity: 0.8 })); coin.rotation.x = Math.PI / 2; coin.position.set(hc.x, 1.5, hc.z); scene.add(coin);
+  const bars = [0, 1, 2, 3, 4, 5].map((i) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), new THREE.MeshBasicMaterial({ color: "#5fb4ff", transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); const a = (i / 6) * 6.283; b.position.set(hc.x + Math.cos(a) * 0.55, 1.0, hc.z + Math.sin(a) * 0.55); scene.add(b); return b; });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.9, 32, 1, true), beamMat("#5fb4ff", 0.25)); beam.position.set(hc.x, 1.25, hc.z); scene.add(beam); M.beams.push(beam);
+  animated.push((t) => { coin.rotation.z = t * 1.2; coin.position.y = 1.5 + Math.sin(t * 1.4) * 0.06; bars.forEach((b, i) => { const s = 0.2 + Math.abs(Math.sin(t * 0.9 + i * 1.3)) * 0.6; b.scale.y = s; b.position.y = 0.85 + s / 2; }); });
+  M.holoC = hc.clone().setY(1);
+}
+
+/* --- Traller (handlevogner i gull) --- */
+function buildCarts() {
+  const baseG = new THREE.BoxGeometry(0.64, 0.05, 0.44), basket = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.64, 0.34, 0.44)), wheel = new THREE.CylinderGeometry(0.06, 0.06, 0.04, 12), handle = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), post = new THREE.CylinderGeometry(0.015, 0.015, 0.42, 6);
+  const lineM = new THREE.LineBasicMaterial({ color: "#e8c06a" }), meshM = new THREE.MeshStandardMaterial({ color: "#d9ab4c", metalness: 1, roughness: 0.3, transparent: true, opacity: 0.22, side: THREE.DoubleSide });
+  CART_HOME.forEach((cell, i) => {
+    const g = new THREE.Group();
+    const b = new THREE.Mesh(baseG, M.steel); b.position.y = 0.17; g.add(b);
+    const bk = new THREE.LineSegments(basket, lineM); bk.position.y = 0.36; g.add(bk);
+    const pane = new THREE.Mesh(new THREE.BoxGeometry(0.63, 0.33, 0.43), meshM); pane.position.y = 0.36; g.add(pane);
+    for (const [x, z] of [[-0.26, -0.17], [0.26, -0.17], [-0.26, 0.17], [0.26, 0.17]]) { const w = new THREE.Mesh(wheel, M.black); w.rotation.z = Math.PI / 2; w.position.set(x, 0.06, z); g.add(w); }
+    const h = new THREE.Mesh(handle, M.gold); h.rotation.z = Math.PI / 2; h.position.set(0, 0.62, -0.3); g.add(h);
+    for (const x of [-0.24, 0.24]) { const p = new THREE.Mesh(post, M.gold); p.position.set(x, 0.42, -0.26); p.rotation.x = -0.2; g.add(p); }
+    const bundles = [];
+    for (let k = 0; k < 6; k++) { const m = new THREE.Mesh(G.bundle, M.bundle); m.position.set(-0.17 + (k % 3) * 0.17 * 0 + (k % 2) * 0.17 - 0.0, 0.25 + Math.floor(k / 2) * 0.1, (k % 2 ? 0.08 : -0.08)); m.position.x = -0.1 + (k % 2) * 0.2; m.rotation.y = rand(-0.1, 0.1); m.visible = false; g.add(m); bundles.push(m); }
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(0.45, 16), M.shadow); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.013; g.add(sh);
+    const p = cw(...cell);
+    g.position.copy(p); g.rotation.y = Math.PI;
+    scene.add(g);
+    carts.push({ i, home: cell, cell: cell.slice(), group: g, bundles, load: 0, value: 0, holder: null });
+  });
+}
+function cartShow(c) { c.bundles.forEach((b, k) => (b.visible = k < c.load)); }
+
+/* --- Sedler som samler seg på gulvet --- */
+const ZS = 60, ZONE_CAP = 600;
+let zonesDirty = true;
+function buildZones() {
+  IM.zones = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.14), new THREE.MeshStandardMaterial({ map: TEX.note, roughness: 0.6, emissive: "#fff", emissiveMap: TEX.note, emissiveIntensity: 0.18, side: THREE.DoubleSide }), ZONE_CELLS.length * ZS);
+  IM.zones.frustumCulled = false;
+  scene.add(IM.zones);
+  for (const cell of ZONE_CELLS) {
+    const p = cw(...cell), mats = [];
+    for (let j = 0; j < ZS; j++) {
+      const r = 0.1 + 0.85 * Math.sqrt(j / ZS), a = rand(0, 6.283);
+      dummy.position.set(p.x + Math.cos(a) * r, 0.006 + j * 0.0016 + (1 - r) * 0.03, p.z + Math.sin(a) * r);
+      dummy.rotation.set(-Math.PI / 2 + rand(-0.15, 0.15), rand(-0.1, 0.1), rand(0, 6.28)); dummy.scale.setScalar(1); dummy.updateMatrix();
+      mats.push(dummy.matrix.clone());
+    }
+    zones.push({ cell, pos: p, notes: 0, mats, claimed: null });
+  }
+}
+function rebuildZones() {
+  let c = 0;
+  for (const z of zones) { const vis = Math.min(ZS, Math.ceil(z.notes / (ZONE_CAP / ZS))); for (let j = 0; j < vis; j++) IM.zones.setMatrixAt(c++, z.mats[j]); }
+  IM.zones.count = c;
+  IM.zones.instanceMatrix.needsUpdate = true;
+  zonesDirty = false;
+}
+function nearestZone(x, z, maxD = 6) {
+  let best = null, bd = maxD * maxD;
+  for (const zn of zones) { const dx = zn.pos.x - x, dz = zn.pos.z - z, d = dx * dx + dz * dz; if (d < bd && zn.notes < ZONE_CAP) { bd = d; best = zn; } }
+  return best;
+}
+
+/* --- Pengehauger (bunter på gulvet, noen på traller) --- */
+let pilesDirty = true;
+const trolleyGeo = { base: null };
+function addPile(cell, bundles, trolley) {
+  block(cell[0], cell[1], trolley ? 0.9 : 0.6);
+  const p = cw(...cell), y0 = trolley ? 0.24 : 0;
+  const slots = [];
+  for (let i = 0; i < 30; i++) {
+    const l = Math.floor(i / 7), r = 0.36 * (1 - l / 5) * Math.sqrt(Math.random()), a = rand(0, 6.283);
+    dummy.position.set(p.x + Math.cos(a) * r, y0 + 0.07 + l * 0.13, p.z + Math.sin(a) * r); dummy.rotation.set(rand(-0.08, 0.08), rand(0, 6.28), rand(-0.08, 0.08)); dummy.scale.setScalar(1.3); dummy.updateMatrix();
+    slots.push(dummy.matrix.clone());
+  }
+  const extra = new THREE.Group();
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.62, 20), M.shadow); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.011; extra.add(sh);
+  if (trolley) {
+    if (!trolleyGeo.base) { trolleyGeo.base = new THREE.BoxGeometry(0.95, 0.06, 0.8); trolleyGeo.wheel = new THREE.CylinderGeometry(0.07, 0.07, 0.05, 12); trolleyGeo.bar = new THREE.BoxGeometry(0.04, 0.7, 0.8); }
+    const b = new THREE.Mesh(trolleyGeo.base, M.gold); b.position.y = 0.19; extra.add(b);
+    for (const [x, z] of [[-0.38, -0.3], [0.38, -0.3], [-0.38, 0.3], [0.38, 0.3]]) { const w = new THREE.Mesh(trolleyGeo.wheel, M.black); w.rotation.z = Math.PI / 2; w.position.set(x, 0.07, z); extra.add(w); }
+    const bar = new THREE.Mesh(trolleyGeo.bar, M.gold); bar.position.set(-0.46, 0.55, 0); extra.add(bar);
+  }
+  extra.position.set(p.x, 0, p.z); scene.add(extra);
+  const pile = { cell, pos: p, bundles: Math.min(30, bundles), slots, extra };
+  piles.push(pile);
+  pilesDirty = true;
+  return pile;
+}
+function removePile(p) {
+  unblock(p.cell[0], p.cell[1]);
+  scene.remove(p.extra);
+  piles.splice(piles.indexOf(p), 1);
+  pilesDirty = true;
+}
+function takeFromPile(p) {
+  if (!piles.includes(p) || p.bundles <= 0) return 0;
+  p.bundles--; pilesDirty = true;
+  if (p.bundles === 0) removePile(p);
+  return BUNDLE;
+}
+function rebuildPiles() {
+  let c = 0;
+  for (const p of piles) for (let j = 0; j < p.bundles; j++) IM.piles.setMatrixAt(c++, p.slots[j]);
+  IM.piles.count = c; IM.piles.instanceMatrix.needsUpdate = true; pilesDirty = false;
+}
+
+/* --- Hologramskjermer på bakveggen --- */
+function drawWealthHolo(s) {
+  const { ctx, w, h } = s; ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(40,26,6,.35)"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(232,192,106,.8)"; ctx.lineWidth = 2; ctx.strokeRect(3, 3, w - 6, h - 6);
+  ctx.fillStyle = "#e8c06a"; ctx.font = "bold 22px monospace"; ctx.fillText("FORMUE · SIMULERT", 18, 34);
+  ctx.fillStyle = "#fff3d0"; ctx.font = "bold 40px monospace"; ctx.fillText(moneyShort(eco.wealth), 18, 84);
+  const d = eco.hist.length > 2 ? eco.hist : [eco.wealth, eco.wealth];
+  const mn = Math.min(...d), mx = Math.max(...d), rg = mx - mn || 1;
+  const gr = ctx.createLinearGradient(0, 100, 0, h); gr.addColorStop(0, "rgba(232,192,106,.45)"); gr.addColorStop(1, "rgba(232,192,106,0)");
+  ctx.beginPath(); d.forEach((v, i) => { const X = 18 + (i / (d.length - 1)) * (w - 36), Y = h - 16 - ((v - mn) / rg) * (h - 130); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+  ctx.strokeStyle = "#ffd27a"; ctx.lineWidth = 3; ctx.stroke();
+  ctx.lineTo(w - 18, h - 16); ctx.lineTo(18, h - 16); ctx.fillStyle = gr; ctx.fill();
+  s.tex.needsUpdate = true;
+}
+function drawFlowHolo(s, t) {
+  const { ctx, w, h } = s; ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(6,22,44,.4)"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(95,180,255,.8)"; ctx.lineWidth = 2; ctx.strokeRect(3, 3, w - 6, h - 6);
+  ctx.fillStyle = "#9fd0ff"; ctx.font = "bold 20px monospace"; ctx.fillText("PENGESTRØM", 18, 32);
+  const vals = [["INN", eco.collected], ["TALT", eco.processed], ["HVELV", eco.deposited]];
+  const mx = Math.max(1, ...vals.map((v) => v[1]));
+  vals.forEach(([lab, v], i) => {
+    const y = 60 + i * 52;
+    ctx.fillStyle = "rgba(95,180,255,.2)"; ctx.fillRect(110, y, w - 130, 26);
+    ctx.fillStyle = i === 2 ? "#e8c06a" : "#5fb4ff"; ctx.fillRect(110, y, (w - 130) * (v / mx), 26);
+    ctx.fillStyle = "#dcefff"; ctx.font = "bold 16px monospace"; ctx.fillText(lab, 18, y + 19); ctx.fillText(moneyShort(v), 118, y + 19);
+  });
+  s.tex.needsUpdate = true;
+}
+function drawVaultHolo(s, t) {
+  const { ctx, w, h } = s; ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(40,26,6,.35)"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(232,192,106,.8)"; ctx.lineWidth = 2; ctx.strokeRect(3, 3, w - 6, h - 6);
+  const cx = w * 0.3, cy = h * 0.56, r = h * 0.32;
+  ctx.lineWidth = 10; ctx.strokeStyle = "rgba(232,192,106,.2)"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+  const share = eco.wealth ? eco.vault / eco.wealth : 0;
+  ctx.strokeStyle = "#ffd27a"; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + share * 6.283); ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = "rgba(95,180,255,.7)"; ctx.beginPath(); ctx.arc(cx, cy, r - 16, t, t + 1.4); ctx.stroke();
+  ctx.fillStyle = "#fff3d0"; ctx.font = "bold 22px monospace"; ctx.textAlign = "center"; ctx.fillText(Math.round(share * 100) + "%", cx, cy + 8); ctx.textAlign = "left";
+  ctx.fillStyle = "#e8c06a"; ctx.font = "bold 20px monospace"; ctx.fillText("HVELV", w * 0.56, 60);
+  ctx.fillStyle = "#fff3d0"; ctx.font = "bold 28px monospace"; ctx.fillText(moneyShort(eco.vault), w * 0.56, 100);
+  ctx.fillStyle = "#c9b98f"; ctx.font = "15px monospace"; ctx.fillText(`${stats.deliveries} leveringer`, w * 0.56, 132); ctx.fillText(`${dock.count} bunter på rampa`, w * 0.56, 156);
+  s.tex.needsUpdate = true;
+}
+function buildHolos() {
+  const defs = [[drawWealthHolo, -10, 7.4, 512, 256], [drawFlowHolo, 0, 5.6, 512, 230], [drawVaultHolo, 10, 7.4, 512, 256]];
+  for (const [fn, x, w, cw_, ch] of defs) {
+    const s = makeScreen(cw_, ch, fn);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, (w * ch) / cw_), holoMat(s.tex, 0.92));
+    m.position.set(x, 3.9, -H / 2 + 0.35); scene.add(m);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, 0.04), M.lampBlue); bar.position.set(x, 3.9 - (w * ch) / cw_ / 2 - 0.08, -H / 2 + 0.35); scene.add(bar);
+    animated.push((t) => { m.position.y = 3.9 + Math.sin(t * 0.8 + x) * 0.04; });
+  }
+  IM.piles = new THREE.InstancedMesh(G.bundle, M.bundle, 16 * 30);
+  IM.piles.frustumCulled = false; IM.piles.count = 0; scene.add(IM.piles);
+}
+
+/* --- Gullstøv --- */
+function buildParticles() {
+  const count = isMobile ? 220 : 600;
+  const pos = new Float32Array(count * 3), sp = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    const nearRing = i < count * 0.4, a = rand(0, 6.283), r = rand(0, 4);
+    pos[i * 3] = nearRing ? TABLE_C.x + Math.cos(a) * r : rand(-W / 2, W / 2);
+    pos[i * 3 + 1] = rand(0.3, 8);
+    pos[i * 3 + 2] = nearRing ? TABLE_C.z + Math.sin(a) * r : rand(-H / 2, H / 2);
+    sp[i] = rand(0.08, 0.3);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ map: TEX.glow, color: "#ffd27a", size: 0.16, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  scene.add(p); M.particles = p;
+  animated.push((t, dt) => {
+    if (!p.visible) return;
+    for (let i = 0; i < count; i++) { pos[i * 3 + 1] += sp[i] * dt; pos[i * 3] += Math.sin(t * 0.5 + i) * 0.1 * dt; if (pos[i * 3 + 1] > 8.5) pos[i * 3 + 1] = 0.3; }
+    g.attributes.position.needsUpdate = true;
+  });
+}
+
+/* =========================================================================
+   7. Pengeregn og pengefoss (instanserte sedler)
+   ========================================================================= */
+const rain = { max: isMobile ? 700 : 2400, levels: [0, 0.12, 0.25, 0.45, 0.7, 1], level: 3, n: 0 };
+const wf = { max: isMobile ? 140 : 320, n: 0 };
+const ACCUM = 0.12, WF_ACCUM = 0.2;
+const wrapA = (a) => a - Math.round(a / 6.2832) * 6.2832;
+
+function initRain() {
+  const geo = new THREE.PlaneGeometry(0.3, 0.14);
+  rain.im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ map: TEX.note, side: THREE.DoubleSide, roughness: 0.6, emissive: "#ffffff", emissiveMap: TEX.note, emissiveIntensity: 0.28 }), rain.max);
+  rain.im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); rain.im.frustumCulled = false; scene.add(rain.im);
+  const N = rain.max;
+  Object.assign(rain, { p: new Float32Array(N * 3), v: new Float32Array(N * 3), r: new Float32Array(N * 3), s: new Float32Array(N * 3), st: new Uint8Array(N), tm: new Float32Array(N), ph: new Float32Array(N) });
+  for (let i = 0; i < N; i++) spawnNote(i, true);
+
+  wf.im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ map: TEX.note, color: "#ffe6a6", side: THREE.DoubleSide, roughness: 0.4, metalness: 0.3, emissive: "#ffb43c", emissiveMap: TEX.note, emissiveIntensity: 1.7 }), wf.max);
+  wf.im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); wf.im.frustumCulled = false; scene.add(wf.im);
+  const K = wf.max;
+  Object.assign(wf, { p: new Float32Array(K * 3), a: new Float32Array(K), rr: new Float32Array(K), vy: new Float32Array(K), r: new Float32Array(K * 3), s: new Float32Array(K * 3), st: new Uint8Array(K), tm: new Float32Array(K) });
+  for (let i = 0; i < K; i++) spawnWf(i, true);
+}
+function spawnNote(i, anywhere) {
+  const p = rain.p, v = rain.v, r = rain.r, s = rain.s, k = i * 3;
+  if (Math.random() < 0.08) { // svever sidelengs gjennom rommet
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    p[k] = anywhere ? rand(-W / 2, W / 2) : -dir * (W / 2 + 1); p[k + 1] = rand(2.5, 7.5); p[k + 2] = rand(-H / 2 + 1, H / 2 - 1);
+    v[k] = dir * rand(0.6, 1.4); v[k + 1] = -rand(0.06, 0.2); v[k + 2] = rand(-0.1, 0.1);
+  } else {
+    p[k] = rand(-W / 2 + 0.3, W / 2 - 0.3); p[k + 1] = anywhere ? rand(0.5, CEIL) : CEIL + rand(0, 2.5); p[k + 2] = rand(-H / 2 + 0.3, H / 2 - 0.3);
+    v[k] = 0; v[k + 1] = -rand(0.55, 1.4); v[k + 2] = 0;
+  }
+  r[k] = rand(0, 6.28); r[k + 1] = rand(0, 6.28); r[k + 2] = rand(0, 6.28);
+  s[k] = rand(-2.6, 2.6); s[k + 1] = rand(-1.6, 1.6); s[k + 2] = rand(-3, 3);
+  rain.st[i] = 0; rain.tm[i] = 0; rain.ph[i] = rand(0, 6.28);
+}
+function groundAt(x, z) {
+  if (Math.abs(x - TABLE_C.x) < TABLE_HX && Math.abs(z - TABLE_C.z) < TABLE_HZ) return mountainSurface(x, z);
+  const [cx, cz] = cellOf(x, z);
+  return inB(cx, cz) ? cellTop[idx(cx, cz)] + 0.012 : 0.012;
+}
+function addMountain(v) {
+  const cap = mountain.slots.length * BUNDLE;
+  if (eco.mountain + v <= cap) eco.mountain += v;
+  else { const z = nearestZone(TABLE_C.x + rand(-6, 6), TABLE_C.z + rand(-5, 5), 9); if (z) { z.notes = Math.min(ZONE_CAP, z.notes + v / NOTE); zonesDirty = true; } }
+}
+function onLand(x, z) {
+  if (Math.abs(x - TABLE_C.x) < TABLE_HX && Math.abs(z - TABLE_C.z) < TABLE_HZ) { if (Math.random() < 0.1) addMountain(NOTE); return; }
+  if (Math.random() < ACCUM) { const zn = nearestZone(x, z); if (zn) { zn.notes++; zonesDirty = true; } }
+}
+function updateRain(dt, t) {
+  const n = Math.round(rain.max * rain.levels[rain.level]);
+  rain.n = n; rain.im.count = n;
+  const p = rain.p, v = rain.v, r = rain.r, s = rain.s;
+  const wx = Math.sin(t * 0.13) * 0.45 + Math.sin(t * 0.41) * 0.2, wz = Math.cos(t * 0.09) * 0.25;
+  const lerp = Math.min(1, dt * 8);
+  for (let i = 0; i < n; i++) {
+    const k = i * 3; let sc = 1;
+    if (rain.st[i] === 0) {
+      const ph = rain.ph[i];
+      p[k] += (v[k] + wx + Math.sin(t * 2.1 + ph) * 0.35) * dt;
+      p[k + 1] += v[k + 1] * (0.75 + 0.35 * Math.cos(t * 3.3 + ph)) * dt;
+      p[k + 2] += (v[k + 2] + wz + Math.cos(t * 1.7 + ph) * 0.25) * dt;
+      r[k] += s[k] * dt; r[k + 1] += s[k + 1] * dt; r[k + 2] += s[k + 2] * dt;
+      if (Math.abs(p[k]) > W / 2 + 1.6 || Math.abs(p[k + 2]) > H / 2 + 1.6) spawnNote(i, false);
+      else {
+        const g = groundAt(p[k], p[k + 2]);
+        if (p[k + 1] <= g) {
+          p[k + 1] = g; rain.st[i] = 1; rain.tm[i] = 0;
+          r[k] = wrapA(r[k]); r[k + 1] = wrapA(r[k + 1]);
+          v[k] = rand(-0.4, 0.4) + wx * 0.5; v[k + 2] = rand(-0.4, 0.4); v[k + 1] = Math.random() < 0.3 ? rand(0.5, 1.1) : 0;
+          onLand(p[k], p[k + 2]);
+        }
+      }
+    } else {
+      rain.tm[i] += dt;
+      const nx = p[k] + v[k] * dt, nz = p[k + 2] + v[k + 2] * dt;
+      if (walkableAt(nx, nz) || groundAt(nx, nz) <= p[k + 1] + 0.02) { p[k] = nx; p[k + 2] = nz; } else { v[k] = v[k + 2] = 0; }
+      const damp = Math.max(0, 1 - 3 * dt); v[k] *= damp; v[k + 2] *= damp;
+      const g = groundAt(p[k], p[k + 2]);
+      p[k + 1] += v[k + 1] * dt; v[k + 1] -= 5 * dt;
+      if (p[k + 1] <= g) { p[k + 1] = g; v[k + 1] = v[k + 1] < -0.5 ? -v[k + 1] * 0.35 : 0; }
+      r[k] += ((r[k] < 0 ? -Math.PI / 2 : Math.PI / 2) - r[k]) * lerp;
+      r[k + 1] += (Math.round(r[k + 1] / Math.PI) * Math.PI - r[k + 1]) * lerp;
+      const tm = rain.tm[i];
+      if (tm > 1.4) sc = Math.max(0, 1 - (tm - 1.4) / 0.7);
+      if (tm > 2.1) spawnNote(i, false);
+    }
+    dummy.position.set(p[k], p[k + 1], p[k + 2]); dummy.rotation.set(r[k], r[k + 1], r[k + 2]); dummy.scale.setScalar(sc); dummy.updateMatrix();
+    rain.im.setMatrixAt(i, dummy.matrix);
+  }
+  rain.im.instanceMatrix.needsUpdate = true;
+}
+function spawnWf(i, anywhere) {
+  const k = i * 3;
+  wf.a[i] = rand(0, 6.283); wf.rr[i] = 0.15 + Math.sqrt(Math.random()) * 0.78;
+  wf.p[k] = TABLE_C.x + Math.cos(wf.a[i]) * wf.rr[i] * MRX; wf.p[k + 2] = TABLE_C.z + Math.sin(wf.a[i]) * wf.rr[i] * MRZ;
+  wf.p[k + 1] = anywhere ? rand(TT + 1, RING_Y) : RING_Y - rand(0.2, 0.6);
+  wf.vy[i] = -rand(0.8, 2);
+  wf.r[k] = rand(0, 6.28); wf.r[k + 1] = rand(0, 6.28); wf.r[k + 2] = rand(0, 6.28);
+  wf.s[k] = rand(-5, 5); wf.s[k + 1] = rand(-3, 3); wf.s[k + 2] = rand(-6, 6);
+  wf.st[i] = 0; wf.tm[i] = 0;
+}
+function updateWaterfall(dt) {
+  const lvl = rain.levels[rain.level];
+  const n = lvl ? Math.round(wf.max * Math.min(1, 0.45 + lvl)) : 0;
+  wf.n = n; wf.im.count = n;
+  const p = wf.p, r = wf.r, s = wf.s, lerp = Math.min(1, dt * 10);
+  for (let i = 0; i < n; i++) {
+    const k = i * 3; let sc = 1;
+    if (wf.st[i] === 0) {
+      wf.a[i] += 0.3 * dt;
+      wf.vy[i] = Math.max(-4.5, wf.vy[i] - 1.3 * dt);
+      p[k + 1] += wf.vy[i] * dt;
+      p[k] = TABLE_C.x + Math.cos(wf.a[i]) * wf.rr[i] * MRX; p[k + 2] = TABLE_C.z + Math.sin(wf.a[i]) * wf.rr[i] * MRZ;
+      r[k] += s[k] * dt; r[k + 1] += s[k + 1] * dt; r[k + 2] += s[k + 2] * dt;
+      const g = mountainSurface(p[k], p[k + 2]);
+      if (p[k + 1] <= g) { p[k + 1] = g; wf.st[i] = 1; wf.tm[i] = 0; r[k] = wrapA(r[k]); r[k + 1] = wrapA(r[k + 1]); if (Math.random() < WF_ACCUM) addMountain(NOTE); }
+    } else {
+      wf.tm[i] += dt;
+      r[k] += ((r[k] < 0 ? -Math.PI / 2 : Math.PI / 2) - r[k]) * lerp;
+      r[k + 1] += (Math.round(r[k + 1] / Math.PI) * Math.PI - r[k + 1]) * lerp;
+      if (wf.tm[i] > 0.5) sc = Math.max(0, 1 - (wf.tm[i] - 0.5) / 0.6);
+      if (wf.tm[i] > 1.1) spawnWf(i, false);
+    }
+    dummy.position.set(p[k], p[k + 1], p[k + 2]); dummy.rotation.set(r[k], r[k + 1], r[k + 2]); dummy.scale.setScalar(sc); dummy.updateMatrix();
+    wf.im.setMatrixAt(i, dummy.matrix);
+  }
+  wf.im.instanceMatrix.needsUpdate = true;
+}
+
+/* =========================================================================
+   8. Den simulerte økonomien
+   ========================================================================= */
+const eco = { vault: 0, mountain: 0, collected: 0, deposited: 0, processed: 0, minted: 0, start: 0, wealth: 0, hist: [], histT: 0 };
+const stats = { done: 0, deliveries: 0 };
+function depositVault(v) { eco.vault += v; eco.deposited += v; }
+function wealth() {
+  let w = eco.vault + eco.mountain + belt.total() + dock.value;
+  for (const z of zones) w += z.notes * NOTE;
+  for (const m of machines) w += m.hopper;
+  for (const a of agents) w += a.carryValue;
+  for (const c of carts) w += c.value;
+  for (const p of piles) w += p.bundles * BUNDLE;
+  return w;
+}
+function resetEconomy() {
+  eco.vault = (TOWER_BASE + 260) * BUNDLE;
+  eco.mountain = Math.floor(mountain.slots.length * 0.55) * BUNDLE;
+  eco.collected = eco.deposited = eco.processed = eco.minted = 0;
+  for (const z of zones) { z.notes = Math.round(rand(60, 260)); z.claimed = null; }
+  zonesDirty = true;
+  for (const p of piles.slice()) removePile(p);
+  for (const [x, z, t] of PILE_START) addPile([x, z], Math.round(rand(14, 26)), t);
+  for (const m of machines) { m.hopper = Math.round(rand(0, 2)) * BUNDLE; m.operator = null; m.counting = 0; }
+  belt.items.length = 0; belt.pending.length = 0;
+  for (let i = 0; i < 6; i++) belt.items.push({ d: 2 + i * 3.4, v: BUNDLE, r: rand(-0.25, 0.25) });
+  dock.count = 8; dock.value = 8 * BUNDLE;
+  for (const c of carts) { c.holder = null; c.load = 0; c.value = 0; c.cell = c.home.slice(); c.group.position.copy(cw(...c.home)); c.group.rotation.y = Math.PI; cartShow(c); }
+  door.open = 0;
+  eco.hist.length = 0;
+  stats.done = 0; stats.deliveries = 0;
+}
+function updateCounts() {
+  const mc = Math.min(mountain.slots.length, Math.floor(eco.mountain / BUNDLE));
+  IM.mountain.count = mc;
+  mountain.topY = mc ? mountain.slots[mc - 1][1] - TT + 0.08 : 0;
+  const vb = Math.floor(eco.vault / BUNDLE), sc = IM.shelves.userData.cap, tc = IM.towers.userData.cap;
+  IM.shelves.count = Math.min(sc, Math.max(0, vb - TOWER_BASE));
+  IM.towers.count = Math.min(tc, Math.min(vb, TOWER_BASE) + Math.max(0, vb - TOWER_BASE - sc));
+  IM.dock.count = Math.min(dock.cap, dock.count);
+  // båndet
+  belt.items.forEach((it, i) => { dummy.position.set(belt.x0 + it.d, 0.77, belt.z); dummy.rotation.set(0, it.r, 0); dummy.scale.setScalar(1.25); dummy.updateMatrix(); IM.belt.setMatrixAt(i, dummy.matrix); });
+  IM.belt.count = belt.items.length; IM.belt.instanceMatrix.needsUpdate = true;
+}
+
+/* --- Hvelvdøra åpner seg når noen skal inn --- */
+function updateDoor(dt, t) {
+  const want = agents.some((a) => a.wantsDoor && a.pos.distanceTo(DOOR_FRONT) < 5);
+  const target = want ? 1 : 0, prev = door.open;
+  door.open += Math.sign(target - door.open) * Math.min(Math.abs(target - door.open), dt * 0.55);
+  const bolt = Math.min(1, door.open / 0.3), swing = Math.max(0, (door.open - 0.3) / 0.7), e = swing * swing * (3 - 2 * swing);
+  door.wheel.rotation.x = door.open * 10;
+  for (const b of door.bolts) b.scale.y = 1 - bolt * 0.85;
+  door.pivot.rotation.y = -e * 1.5;
+  door.inside.material.emissiveIntensity = 0.25 + e * 1.8;
+  door.lamp.material.emissive.set(door.open > 0.02 ? "#ffb347" : "#3ee09a");
+  if (prev < 0.3 && door.open >= 0.3 && t - door.msgAt > 25) { door.msgAt = t; feed(`<b class="gold">Hvelvdøra</b> låses opp.`); }
+}
+
+/* =========================================================================
+   9. Agenter i dress
+   ========================================================================= */
+const agents = [];
+function initAgentGeo() {
+  G.leg = new THREE.BoxGeometry(0.1, 0.34, 0.11); G.leg.translate(0, -0.17, 0);
+  G.shoe = new THREE.BoxGeometry(0.11, 0.06, 0.2);
+  G.torso = new THREE.BoxGeometry(0.32, 0.42, 0.2);
+  G.hem = new THREE.BoxGeometry(0.335, 0.1, 0.21);
+  const v = new THREE.Shape(); v.moveTo(-0.055, 0.09); v.lineTo(0.055, 0.09); v.lineTo(0, -0.08); v.closePath();
+  G.shirtV = new THREE.ShapeGeometry(v);
+  const t = new THREE.Shape(); t.moveTo(-0.014, 0.08); t.lineTo(0.014, 0.08); t.lineTo(0.024, -0.08); t.lineTo(0, -0.12); t.lineTo(-0.024, -0.08); t.closePath();
+  G.tie = new THREE.ShapeGeometry(t);
+  G.arm = new THREE.BoxGeometry(0.08, 0.28, 0.085); G.arm.translate(0, -0.14, 0);
+  G.cuff = new THREE.BoxGeometry(0.084, 0.03, 0.09);
+  G.hand = new THREE.SphereGeometry(0.042, 10, 8);
+  G.neck = new THREE.CylinderGeometry(0.045, 0.05, 0.07, 10);
+  G.head = new THREE.SphereGeometry(0.12, 18, 14);
+  G.hair = new THREE.SphereGeometry(0.127, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.55);
+  G.glasses = new THREE.BoxGeometry(0.2, 0.045, 0.03);
+  G.watch = new THREE.BoxGeometry(0.09, 0.03, 0.095);
+  G.case = new THREE.BoxGeometry(0.27, 0.2, 0.07);
+  G.clasp = new THREE.BoxGeometry(0.06, 0.03, 0.01);
+  G.pin = new THREE.SphereGeometry(0.022, 8, 6);
+  G.pocket = new THREE.BoxGeometry(0.05, 0.025, 0.01);
+  G.shadow = new THREE.CircleGeometry(0.3, 18);
+  G.ring = new THREE.RingGeometry(0.36, 0.44, 32);
+  M.shirt = new THREE.MeshStandardMaterial({ color: "#f3f2ee", roughness: 0.6, side: THREE.DoubleSide });
+  M.tie = new THREE.MeshStandardMaterial({ color: "#0a0a0c", roughness: 0.4, side: THREE.DoubleSide });
+  M.shoe = new THREE.MeshStandardMaterial({ color: "#050505", roughness: 0.15, metalness: 0.4 });
+  M.glasses = new THREE.MeshStandardMaterial({ color: "#020203", roughness: 0.05, metalness: 0.9 });
+  M.case = new THREE.MeshStandardMaterial({ color: "#1a120c", roughness: 0.35, metalness: 0.2 });
+  M.role = {};
+  for (const k of ROLE_KEYS) M.role[k] = emissive(ROLES[k].color, 2.6);
+}
+const SUITS = ["#111216", "#16203a", "#1c1e25", "#0f1830", "#1b1b1d", "#14182a"];
+const SKINS = ["#f1c9a5", "#d9a77f", "#b07a52", "#8a5a3b", "#f6d7bd", "#c68f66"];
+const HAIRS = ["#17110d", "#3b2a1d", "#6b4a2b", "#c9a46a", "#8d8d8d", "#0b0b0b"];
+
+let agentSeq = 0;
+class Agent {
+  constructor(role, cell) {
+    this.id = ++agentSeq;
+    this.role = role;
+    this.cfg = ROLES[role];
+    this.name = `#${this.id} ${NAMES[(this.id - 1) % NAMES.length]}`;
+    this.speed = rand(...this.cfg.speed);
+    this.pos = cw(cell[0], cell[1]);
+    this.heading = rand(0, 6.28);
+    this.path = [];
+    this.state = "idle";
+    this.timer = rand(0.2, 1.5);
+    this.job = false;
+    this.label = "";
+    this.activity = "idle";
+    this.done = 0;
+    this.phase = rand(0, 10);
+    this.carryValue = 0;
+    this.stuck = 0;
+    this.workTotal = 0;
+    this.look = {
+      suit: role === "manager" ? "#0c0c0e" : role === "vault" ? pick(["#16203a", "#0f1830", "#14182a"]) : pick(SUITS),
+      skin: pick(SKINS), hair: pick(HAIRS), hairStyle: Math.random() < 0.15 ? 0 : 1 + Math.floor(Math.random() * 3),
+      glasses: Math.random() < (role === "manager" ? 0.7 : role === "trader" ? 0.4 : 0.22),
+      pocket: role === "manager" || Math.random() < 0.3,
+      scale: rand(1.12, 1.28),
+    };
+    this.build();
+  }
+
+  build() {
+    const g = new THREE.Group(), L = this.look;
+    const suitM = mat(L.suit, 0.62, 0.15), skinM = mat(L.skin, 0.7, 0), hairM = mat(L.hair, 0.85, 0);
+    const sh = new THREE.Mesh(G.shadow, M.shadow); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; g.add(sh);
+    const body = new THREE.Group(); g.add(body); this.body = body;
+    this.legs = [-0.06, 0.06].map((x) => { const p = new THREE.Group(); p.position.set(x, 0.42, 0); p.add(new THREE.Mesh(G.leg, suitM)); const s = new THREE.Mesh(G.shoe, M.shoe); s.position.set(0, -0.39, 0.03); p.add(s); body.add(p); return p; });
+    const up = new THREE.Group(); up.position.y = 0.42; body.add(up); this.upper = up;
+    const torso = new THREE.Mesh(G.torso, suitM); torso.position.y = 0.2; up.add(torso);
+    const hem = new THREE.Mesh(G.hem, suitM); hem.position.y = 0.03; up.add(hem);
+    const shirt = new THREE.Mesh(G.shirtV, M.shirt); shirt.position.set(0, 0.3, 0.102); up.add(shirt);
+    const tie = new THREE.Mesh(G.tie, M.tie); tie.position.set(0, 0.29, 0.104); up.add(tie);
+    const pin = new THREE.Mesh(G.pin, M.role[this.role]); pin.position.set(-0.1, 0.33, 0.106); up.add(pin);
+    if (L.pocket) { const pk = new THREE.Mesh(G.pocket, this.role === "manager" ? M.gold : M.shirt); pk.position.set(0.09, 0.31, 0.104); up.add(pk); }
+    this.arms = [-1, 1].map((sx) => {
+      const p = new THREE.Group(); p.position.set(sx * 0.2, 0.37, 0);
+      p.add(new THREE.Mesh(G.arm, suitM));
+      const cuff = new THREE.Mesh(G.cuff, M.shirt); cuff.position.y = -0.285; p.add(cuff);
+      const hand = new THREE.Mesh(G.hand, skinM); hand.position.y = -0.33; p.add(hand);
+      up.add(p); return p;
+    });
+    const watch = new THREE.Mesh(G.watch, M.gold); watch.position.y = -0.26; this.arms[1].add(watch);
+    const neck = new THREE.Mesh(G.neck, skinM); neck.position.y = 0.45; up.add(neck);
+    const head = new THREE.Group(); head.position.y = 0.55; up.add(head); this.head = head;
+    head.add(new THREE.Mesh(G.head, skinM));
+    if (L.hairStyle) { const h = new THREE.Mesh(G.hair, hairM); h.position.y = 0.012; h.rotation.x = -0.28; h.scale.set(1.04, L.hairStyle === 3 ? 1.12 : 0.95, 1.06); head.add(h); }
+    if (L.glasses) { const gl = new THREE.Mesh(G.glasses, M.glasses); gl.position.set(0, 0.015, 0.11); head.add(gl); }
+    if (this.role === "manager") {
+      const c = new THREE.Group();
+      const box = new THREE.Mesh(G.case, M.case); box.position.y = -0.1; c.add(box);
+      const clasp = new THREE.Mesh(G.clasp, M.gold); clasp.position.set(0, -0.03, 0.037); c.add(clasp);
+      c.position.set(0, -0.36, 0); c.rotation.y = Math.PI / 2; this.arms[0].add(c); this.case = c;
+    }
+    this.bundle = new THREE.Mesh(G.bundle, M.bundle); this.bundle.scale.setScalar(1.25); this.bundle.position.set(0, 0.17, 0.24); this.bundle.visible = false; up.add(this.bundle);
+    this.selRing = new THREE.Mesh(G.ring, new THREE.MeshBasicMaterial({ color: this.cfg.color, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+    this.selRing.rotation.x = -Math.PI / 2; this.selRing.position.y = 0.02; this.selRing.visible = false; g.add(this.selRing);
+    this.hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.5), new THREE.MeshBasicMaterial({ visible: false })); this.hit.position.y = 0.58; this.hit.userData.agent = this; g.add(this.hit);
+    this.tagEl = document.createElement("div");
+    this.tagEl.className = "tag3d"; this.tagEl.style.setProperty("--c", this.cfg.color);
+    this.tag = new CSS2DObject(this.tagEl); this.tag.position.y = 1.32; g.add(this.tag);
+    g.scale.setScalar(L.scale);
+    g.position.copy(this.pos); g.rotation.y = this.heading;
+    this.group = g;
+    scene.add(g);
+    this.updateTag(true);
+  }
+
+  dispose() { this.releaseClaim(); scene.remove(this.group); this.tag.element.remove(); }
+  tagHtml() { return `<b style="color:${this.cfg.color}">${escapeHtml(this.name)}</b>`; }
+
+  updateTag(force) {
+    const busy = this.state === "working" || this.state === "communicating";
+    const prog = busy && this.workTotal ? Math.min(1, 1 - this.timer / this.workTotal) : null;
+    const k = `${this.state}|${this.label}|${prog === null ? "" : Math.round(prog * 20)}|${this.selected}`;
+    if (!force && k === this._tagKey) return;
+    this._tagKey = k;
+    const icon = { working: "⚙", walking: "→", communicating: "💬", celebrating: "★", idle: "·" }[this.state] || "·";
+    this.tagEl.classList.toggle("sel", !!this.selected);
+    const quiet = !this.selected && (this.activity === "idle" || this.state === "idle");
+    this.tagEl.classList.toggle("quiet", quiet);
+    this.tagEl.innerHTML = `<b>${icon} ${escapeHtml(this.name)}</b> ${escapeHtml(this.label || STATE_TEXT[this.state])}${prog !== null ? `<div class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></div>` : ""}`;
+  }
+
+  setCarry(v, show = true) { this.carryValue = v; this.bundle.visible = v > 0 && show; if (this.case) this.case.visible = !(v > 0); }
+
+  claimCell(c) {
+    const k = key(c);
+    if (this.claimed === k) return;
+    this.releaseClaim();
+    if (SPOTSET.has(k)) { const o = spotOcc.get(k); if (!o || o === this) { spotOcc.set(k, this); this.claimed = k; } }
+  }
+  releaseClaim() { if (this.claimed && spotOcc.get(this.claimed) === this) spotOcc.delete(this.claimed); this.claimed = null; }
+
+  goTo(cell, then) {
+    const p = findPath(this.pos, cell);
+    if (!p) return false;
+    this.path = p;
+    this.state = "walking";
+    this.arrive = then;
+    this.stuck = 0;
+    this.updateTag(true);
+    return true;
+  }
+
+  /** Gå til en rute og gjør en oppgave der. */
+  goWork(o) {
+    this.label = o.label || ""; this.activity = o.activity || "work"; this.wantsDoor = !!o.door;
+    if (o.claim === false) this.releaseClaim(); else this.claimCell(o.cell);
+    const then = () => this.work(o);
+    const [cx, cz] = cellOf(this.pos.x, this.pos.z);
+    if (cx === o.cell[0] && cz === o.cell[1]) { then(); return; }
+    if (!this.goTo(o.cell, then)) this.finish();
+  }
+
+  work(o) {
+    this.state = o.state || "working";
+    this.anim = o.anim || null;
+    this.timer = this.workTotal = o.secs;
+    this.lookAt = o.look || null;
+    this.onDone = o.done || null;
+    this.label = o.label || this.label;
+    this.activity = o.activity || this.activity;
+    this.wantsDoor = !!o.door;
+    this.updateTag(true);
+  }
+
+  wander() {
+    const [cx, cz] = cellOf(this.pos.x, this.pos.z);
+    for (let i = 0; i < 25; i++) {
+      const x = cx + Math.round(rand(-6, 6)), z = cz + Math.round(rand(-6, 6));
+      if (free(x, z) && !SPOTSET.has(x + "," + z)) return this.goWork({ cell: [x, z], secs: rand(0.8, 2), label: "Ser seg rundt", activity: "idle", claim: false, done: () => this.finish() });
+    }
+    this.finish();
+  }
+
+  celebrate(text) {
+    this.state = "celebrating"; this.timer = 2.2; this.label = "Jippi!"; this.activity = "work";
+    note(text, GOLD, this.pos, 1.6);
+    this.updateTag(true);
+  }
+
+  /** Avslutt oppgaven. Har agenten penger i hendene, legges de på nærmeste gulvhaug. */
+  finish(pause = rand(0.3, 1.6)) {
+    if (this.machine && this.machine.operator === this) this.machine.operator = null;
+    this.machine = null;
+    if (this.zoneClaim) { this.zoneClaim.claimed = null; this.zoneClaim = null; }
+    if (this.carryValue) { const z = nearestZone(this.pos.x, this.pos.z, 40); if (z) { z.notes += this.carryValue / NOTE; zonesDirty = true; } else eco.mountain += this.carryValue; this.setCarry(0); }
+    if (this.cartRes) { const c = this.cartRes; c.holder = null; c.cell = nearFree(cellOf(c.group.position.x, c.group.position.z), c.group.position); this.cart = null; this.cartRes = null; }
+    this.job = false; this.state = "idle"; this.timer = pause; this.label = ""; this.activity = "idle"; this.anim = null; this.wantsDoor = false; this.lookAt = null; this.path = [];
+    this.arms[0].rotation.z = this.arms[1].rotation.z = 0;
+    this.updateTag(true);
+  }
+
+  pose(dt) {
+    const U = this.upper, A = this.arms, Hd = this.head, k = Math.min(1, dt * 8), ph = this.phase;
+    const e = (o, p, v) => (o[p] += (v - o[p]) * k);
+    switch (this.anim) {
+      case "bend": e(U.rotation, "x", 0.85); e(A[0].rotation, "x", -1.0); e(A[1].rotation, "x", -1.0); break;
+      case "type": e(U.rotation, "x", 0.12); A[0].rotation.x = -1.0 + Math.sin(ph * 16) * 0.12; A[1].rotation.x = -1.0 + Math.cos(ph * 15) * 0.12; e(Hd.rotation, "x", 0.15); break;
+      case "load": e(U.rotation, "x", 0.25); A[0].rotation.x = A[1].rotation.x = -1.3 + Math.sin(ph * 6) * 0.25; break;
+      case "wait": e(U.rotation, "x", 0); e(A[0].rotation, "x", -0.25); e(A[1].rotation, "x", -0.25); Hd.rotation.x = 0.2; Hd.rotation.y = Math.sin(ph * 0.8) * 0.25; break;
+      case "stack": e(U.rotation, "x", 0.1); A[0].rotation.x = -1.7 + Math.sin(ph * 5) * 0.35; A[1].rotation.x = -1.7 + Math.sin(ph * 5 + 1.5) * 0.35; break;
+      case "open": e(U.rotation, "x", 0.05); A[0].rotation.x = -1.5 + Math.sin(ph * 4) * 0.3; A[1].rotation.x = -1.5 + Math.cos(ph * 4) * 0.3; break;
+      case "inspect": e(U.rotation, "x", 0.08); e(A[0].rotation, "x", 0.25); A[1].rotation.x = -1.35 + Math.sin(ph * 2) * 0.15; Hd.rotation.x = 0.1 + Math.sin(ph * 1.5) * 0.08; Hd.rotation.y = Math.sin(ph * 0.7) * 0.3; break;
+      case "talk": e(U.rotation, "x", 0); A[1].rotation.x = -0.8 + Math.sin(ph * 5) * 0.35; e(A[0].rotation, "x", -0.15); Hd.rotation.x = Math.sin(ph * 7) * 0.1; break;
+      default: e(U.rotation, "x", 0); e(A[0].rotation, "x", 0); e(A[1].rotation, "x", 0);
+    }
+  }
+
+  update(dt) {
+    this.phase += dt;
+    const Lg = this.legs, A = this.arms, U = this.upper, Hd = this.head;
+    if (this.state === "walking") {
+      const target = this.path[0];
+      if (!target) { this.state = "idle"; this.timer = 0.2; const cb = this.arrive; this.arrive = null; cb && cb(); }
+      else {
+        const dx = target.x - this.pos.x, dz = target.z - this.pos.z, dist = Math.hypot(dx, dz);
+        if (dist < 0.12) this.path.shift();
+        else {
+          const want = Math.atan2(dx, dz);
+          const diff = ((want - this.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+          this.heading += diff * Math.min(1, dt * 8);
+          const sp = this.speed * (Math.abs(diff) > 1.2 ? 0.35 : 1) * (this.cart ? 0.8 : 1);
+          const step = Math.min(dist, sp * dt);
+          const bx = this.pos.x, bz = this.pos.z;
+          this.pos.x += (dx / dist) * step; this.pos.z += (dz / dist) * step;
+          this.stuck = Math.hypot(this.pos.x - bx, this.pos.z - bz) < sp * dt * 0.2 ? this.stuck + dt : 0;
+        }
+      }
+      const s = this.phase * this.speed * 6.2;
+      Lg[0].rotation.x = Math.sin(s) * 0.6; Lg[1].rotation.x = -Math.sin(s) * 0.6;
+      if (this.cart) { A[0].rotation.x = A[1].rotation.x = -1.2; }
+      else if (this.carryValue) { A[0].rotation.x = A[1].rotation.x = -1.05; }
+      else { A[0].rotation.x = -Math.sin(s) * 0.5; A[1].rotation.x = Math.sin(s) * 0.5; }
+      U.rotation.x += ((this.cart ? 0.2 : 0.04) - U.rotation.x) * 0.2;
+      this.body.position.y = Math.abs(Math.sin(s)) * 0.025;
+      Hd.rotation.y *= 0.9; Hd.rotation.x *= 0.9;
+    } else {
+      Lg[0].rotation.x *= 0.85; Lg[1].rotation.x *= 0.85;
+      this.body.position.y *= 0.8;
+      this.timer -= dt;
+      if (this.state === "working" || this.state === "communicating") {
+        this.pose(dt);
+        if (this.lookAt) this.faceTowards(this.lookAt, dt);
+        this.updateTag();
+        if (this.timer <= 0) {
+          const cb = this.onDone; this.onDone = null; this.workTotal = 0; this.state = "idle"; this.timer = 0;
+          Hd.rotation.set(0, 0, 0);
+          cb ? cb() : this.finish();
+        }
+      } else if (this.state === "celebrating") {
+        this.body.position.y = Math.abs(Math.sin(this.phase * 9)) * 0.26;
+        A[0].rotation.x = A[1].rotation.x = -2.8 + Math.sin(this.phase * 14) * 0.25;
+        A[0].rotation.z = -0.25; A[1].rotation.z = 0.25;
+        U.rotation.x *= 0.8;
+        this.heading += dt * 4;
+        if (this.timer <= 0) this.finish();
+      } else {
+        A[0].rotation.x *= 0.85; A[1].rotation.x *= 0.85; U.rotation.x *= 0.85;
+        Hd.rotation.y = Math.sin(this.phase * 1.2 + this.id) * 0.5;
+        this.jobIdle = this.job ? (this.jobIdle || 0) + dt : 0;
+        if (this.jobIdle > 8) { this.jobIdle = 0; this.finish(); }
+        if (this.timer <= 0 && !this.job) decide(this);
+      }
+    }
+
+    // Hold avstand til andre agenter
+    for (const o of agents) {
+      if (o === this) continue;
+      const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, d2 = dx * dx + dz * dz;
+      if (d2 > 0.0001 && d2 < 0.36) {
+        const d = Math.sqrt(d2), push = (0.6 - d) * (this.state === "walking" ? 1.6 : 0.6) * dt;
+        const nx = this.pos.x + (dx / d) * push, nz = this.pos.z + (dz / d) * push;
+        if (walkableAt(nx, nz)) { this.pos.x = nx; this.pos.z = nz; }
+      }
+    }
+    if (this.state === "walking" && this.stuck > 1.2 && this.path.length) { const last = this.path[this.path.length - 1]; const cb = this.arrive; if (!this.goTo(cellOf(last.x, last.z), cb)) this.finish(); }
+
+    this.group.position.x = this.pos.x;
+    this.group.position.z = this.pos.z;
+    this.group.rotation.y = this.heading;
+    if (this.cart) {
+      const c = this.cart.group;
+      c.position.set(this.pos.x + Math.sin(this.heading) * 0.68, 0, this.pos.z + Math.cos(this.heading) * 0.68);
+      c.rotation.y = this.heading;
+    }
+    this.selRing.visible = !!this.selected;
+    if (this.selected) this.selRing.rotation.z += dt;
+  }
+
+  faceTowards(v, dt) {
+    const want = Math.atan2(v.x - this.pos.x, v.z - this.pos.z);
+    const diff = ((want - this.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    this.heading += diff * Math.min(1, dt * 6);
+  }
+}
+
+/* =========================================================================
+   10. Oppgaver per rolle. Hver kjede ender i finish(), og agenten får en ny.
+   ========================================================================= */
+const botQueue = [];
+const byDist = (a, f) => (p, q) => f(p).distanceTo(a.pos) - f(q).distanceTo(a.pos);
+
+function decide(a) {
+  if (a.job) return;
+  a.job = true;
+  if (Math.random() < 0.08) return a.wander();
+  jobs[a.role](a);
+}
+
+function chooseSource(a) {
+  const opts = [];
+  for (const z of zones) if (z.notes >= 40 && (!z.claimed || z.claimed === a)) opts.push({ s: z.notes / 140 - z.pos.distanceTo(a.pos) / 14, z });
+  for (const p of piles) if (p.bundles > 0) opts.push({ s: 1.0 - p.pos.distanceTo(a.pos) / 14, p });
+  if (eco.mountain >= BUNDLE * 30) opts.push({ s: 0.7 - TABLE_C.distanceTo(a.pos) / 20, m: true });
+  if (!opts.length) return null;
+  for (const o of opts) o.s += Math.random() * 0.6;
+  const o = opts.sort((p, q) => q.s - p.s)[0];
+  if (o.z) {
+    o.z.claimed = a; a.zoneClaim = o.z;
+    return { cell: o.z.cell, look: o.z.pos, label: "Plukker opp sedler", take: () => { const n = Math.min(100, Math.floor(o.z.notes)); o.z.notes -= n; o.z.claimed = null; a.zoneClaim = null; zonesDirty = true; return n * NOTE; } };
+  }
+  if (o.p) return { cell: nearFree(o.p.cell, a.pos), look: o.p.pos, label: "Henter en pengebunt", take: () => takeFromPile(o.p) };
+  return { cell: pickSpot(MOUNTAIN_SPOTS, a), look: TABLE_C, label: "Tar fra pengefjellet", take: () => { const v = Math.min(BUNDLE, eco.mountain); eco.mountain -= v; return v; } };
+}
+
+const jobs = {
+  /* Innsamler: plukk opp → tellemaskin → hvelvet → «Kontantlevering fullført» */
+  collector(a) {
+    const src = chooseSource(a);
+    if (!src) return a.wander();
+    a.goWork({ cell: src.cell, look: src.look, secs: 1.3, label: src.label, anim: "bend", activity: "collect", done: () => {
+      const v = src.take();
+      if (!v) return a.finish(0.2);
+      a.setCarry(v); eco.collected += v;
+      if (Math.random() < 0.3) feed(`${a.tagHtml()} samlet inn en seddelbunt (${money(v)}).`);
+      const m = machines.filter((mm) => !mm.operator).sort(byDist(a, (mm) => mm.center))[0];
+      if (m && Math.random() < 0.8) {
+        m.operator = a; a.machine = m;
+        a.goWork({ cell: m.spot, look: m.center, secs: 0.8, label: "Legger sedler i telleren", anim: "load", activity: "transport", done: () => {
+          m.start(a.carryValue, 3); a.setCarry(a.carryValue, false);
+          a.work({ secs: 3, label: `Maskinen teller ${money(a.carryValue)}`, anim: "wait", look: m.center, activity: "work", done: () => {
+            eco.processed += a.carryValue; m.operator = null; a.machine = null; a.setCarry(a.carryValue);
+            a.goWork({ cell: pickSpot(DOOR_SPOTS, a), look: DOOR_LOOK, secs: 1.3, label: "Legger bunten i hvelvet", anim: "stack", activity: "transport", door: true, done: () => {
+              const v2 = a.carryValue; a.setCarry(0); depositVault(v2);
+              a.done++; stats.done++; stats.deliveries++;
+              note("Kontantlevering fullført", GOLD, a.pos, 1.6);
+              feed(`${a.tagHtml()} fullførte en levering til hvelvet (${money(v2)}).`);
+              if (Math.random() < 0.35) a.celebrate("+" + money(v2)); else a.finish();
+            } });
+          } });
+        } });
+      } else {
+        const m2 = machines.slice().sort((p, q) => p.hopper - q.hopper)[0];
+        a.goWork({ cell: pickSpot([m2.drop], a), look: m2.center, secs: 0.9, label: "Fyller tellemaskinen", anim: "load", activity: "transport", done: () => {
+          m2.hopper += a.carryValue; a.setCarry(0); a.done++; stats.done++; a.finish();
+        } });
+      }
+    } });
+  },
+
+  /* Teller: last maskinen → vent → bunten på båndet */
+  counter(a) {
+    const m = machines.filter((mm) => !mm.operator && mm.hopper >= BUNDLE * 0.3).sort((p, q) => q.hopper - p.hopper)[0];
+    if (m) {
+      m.operator = a; a.machine = m;
+      return a.goWork({ cell: m.spot, look: m.center, secs: 0.9, label: "Laster tellemaskinen", anim: "load", activity: "work", done: () => {
+        const v = Math.min(m.hopper, BUNDLE);
+        if (!v) return a.finish();
+        m.hopper -= v; m.start(v, 3.4); a.setCarry(v, false);
+        if (Math.random() < 0.25) feed(`Tellemaskin ${m.i + 1} behandler ${money(v)}.`);
+        a.work({ secs: 3.4, label: `Maskinen teller ${money(v)}`, anim: "wait", look: m.center, activity: "work", done: () => {
+          eco.processed += v; m.operator = null; a.machine = null; a.setCarry(v);
+          a.goWork({ cell: pickSpot(BELT_SPOTS, a), look: BELT_START, secs: 0.8, label: "Legger bunten på båndet", anim: "load", activity: "transport", done: () => {
+            belt.add(a.carryValue); a.setCarry(0); a.done++; stats.done++;
+            if (Math.random() < 0.2) feed(`${a.tagHtml()} sendte en talt bunt videre på båndet.`);
+            a.finish();
+          } });
+        } });
+      } });
+    }
+    if (eco.mountain >= BUNDLE * 30 && Math.random() < 0.7) {
+      const mm = machines.slice().sort((p, q) => p.hopper - q.hopper)[0];
+      return a.goWork({ cell: pickSpot(MOUNTAIN_SPOTS, a), look: TABLE_C, secs: 1.2, label: "Henter sedler til telleren", anim: "bend", activity: "collect", done: () => {
+        const v = Math.min(BUNDLE, eco.mountain); eco.mountain -= v; eco.collected += v; a.setCarry(v);
+        a.goWork({ cell: pickSpot([mm.drop], a), look: mm.center, secs: 0.9, label: "Fyller tellemaskinen", anim: "load", activity: "transport", done: () => { mm.hopper += a.carryValue; a.setCarry(0); a.finish(); } });
+      } });
+    }
+    const m3 = pick(machines);
+    a.goWork({ cell: nearFree(m3.spot, a.pos), look: m3.center, secs: rand(2, 4), label: "Kalibrerer tellemaskinen", anim: "type", activity: "work", claim: false });
+  },
+
+  /* Hvelvarbeider: tralle → rampa → åpne døra → stable på hylla → parker tralla */
+  vault(a) {
+    const cart = carts.find((c) => !c.holder);
+    if (cart && (dock.count >= 2 || cart.load > 0)) {
+      cart.holder = a; a.cartRes = cart;
+      return a.goWork({ cell: nearFree(cart.cell, a.pos), look: cart.group.position, secs: 0.6, label: "Henter tralle", anim: "bend", activity: "transport", done: () => {
+        a.cart = cart;
+        const loadUp = (next) => {
+          if (cart.load > 0) return next();
+          a.goWork({ cell: pickSpot(DOCK_SPOTS, a), look: DOCK_C, secs: 1.6, label: "Laster tralla", anim: "load", activity: "transport", done: () => {
+            const { k, v } = dock.take(6);
+            if (!k) return park();
+            cart.load = k; cart.value = v; cartShow(cart);
+            if (Math.random() < 0.3) feed(`${a.tagHtml()} lastet ${k} bunter på tralla.`);
+            next();
+          } });
+        };
+        const park = () => a.goWork({ cell: cart.home, look: null, secs: 0.4, label: "Parkerer tralla", anim: "bend", activity: "transport", done: () => {
+          a.cart = null; a.cartRes = null; cart.holder = null; cart.cell = cart.home.slice();
+          cart.group.position.copy(cw(...cart.home)); cart.group.rotation.y = Math.PI;
+          a.finish();
+        } });
+        loadUp(() => {
+          a.goWork({ cell: pickSpot(DOOR_SPOTS, a), look: DOOR_LOOK, secs: 1.5, label: "Åpner hvelvdøra", anim: "open", activity: "transport", door: true, done: () => {
+            a.goWork({ cell: pickSpot(SHELF_SPOTS, a), look: null, secs: 2.2, label: "Stabler bunter på hylla", anim: "stack", activity: "work", door: true, done: () => {
+              const v = cart.value, k = cart.load;
+              depositVault(v); cart.load = 0; cart.value = 0; cartShow(cart);
+              a.done++; stats.done++; stats.deliveries++;
+              note("Hvelvinnskudd fullført", GOLD, a.pos, 1.6);
+              feed(`Hvelvinnskudd fullført: ${a.tagHtml()} stablet ${k} bunter (${money(v)}).`);
+              park();
+            } });
+          } });
+        });
+      } });
+    }
+    if (piles.length && Math.random() < 0.55) {
+      const p = piles.slice().sort(byDist(a, (q) => q.pos))[0];
+      return a.goWork({ cell: nearFree(p.cell, a.pos), look: p.pos, secs: 1.1, label: "Henter bunt fra haugen", anim: "bend", activity: "collect", done: () => {
+        const v = takeFromPile(p);
+        if (!v) return a.finish();
+        a.setCarry(v); eco.collected += v;
+        a.goWork({ cell: pickSpot(DOOR_SPOTS, a), look: DOOR_LOOK, secs: 1.2, label: "Legger bunten i hvelvet", anim: "stack", activity: "transport", door: true, done: () => {
+          depositVault(a.carryValue); a.setCarry(0); a.done++; stats.done++; stats.deliveries++;
+          note("Kontantlevering fullført", GOLD, a.pos, 1.4);
+          a.finish();
+        } });
+      } });
+    }
+    const sp = pick(SHELF_SPOTS);
+    a.goWork({ cell: nearFree(sp, a.pos), look: new THREE.Vector3(W / 2, 1, cw(...sp).z), secs: rand(2, 3.5), label: "Teller beholdningen", anim: "inspect", activity: "work", claim: false });
+  },
+
+  /* Trader: terminaler, diskusjoner, og av og til en simulert gevinst som kommer ut på båndet */
+  trader(a) {
+    if (botQueue.length) {
+      const ev = botQueue.shift(), spot = pickSpot(DESK_SPOTS, a);
+      return a.goWork({ cell: spot, look: deskLooks.get(key(spot)) || M.holoC, secs: 2.2, label: ev.label, anim: "type", activity: "work", done: () => {
+        note(ev.note, ev.color, a.pos, 2);
+        if (ev.win) a.celebrate(ev.note); else a.finish();
+      } });
+    }
+    if (Math.random() < 0.28) {
+      return a.goWork({ cell: pickSpot(HOLO_SPOTS, a), look: M.holoC, secs: rand(3, 5), label: "Diskuterer strategi", anim: "talk", state: "communicating", activity: "talk", done: () => {
+        if (Math.random() < 0.4) feed(`${a.tagHtml()}: trading-strategi oppdatert.`);
+        a.finish();
+      } });
+    }
+    const spot = pickSpot(DESK_SPOTS, a);
+    a.goWork({ cell: spot, look: deskLooks.get(key(spot)) || M.holoC, secs: rand(3, 7), label: pick(["Analyserer markedet", "Leser ordreboka", "Tester strategi", "Følger trenden"]), anim: "type", activity: "work", done: () => {
+      a.done++; stats.done++;
+      if (Math.random() < 0.28) {
+        const v = BUNDLE * (1 + Math.floor(Math.random() * 3));
+        for (let i = 0; i < v / BUNDLE; i++) belt.add(BUNDLE);
+        eco.minted += v;
+        feed(`${a.tagHtml()}: simulert gevinst ${money(v)}. Nye bunter kommer ut på båndet.`);
+        return a.celebrate(`+${money(v)} simulert`);
+      }
+      a.finish();
+    } });
+  },
+
+  /* Sjef: inspiserer stasjoner og koordinerer andre agenter */
+  manager(a) {
+    if (Math.random() < 0.4) {
+      const t = agents.filter((o) => o !== a && o.role !== "manager" && o.state === "working").sort(byDist(a, (o) => o.pos))[0];
+      if (t) {
+        return a.goWork({ cell: nearFree(cellOf(t.pos.x, t.pos.z), a.pos), look: t.pos, secs: 2.4, label: `Koordinerer med ${t.name}`, anim: "talk", state: "communicating", activity: "talk", claim: false, done: () => {
+          if (Math.random() < 0.5) feed(`${a.tagHtml()} koordinerte med ${t.tagHtml()}.`);
+          a.finish();
+        } });
+      }
+    }
+    const p = pick(INSPECT);
+    a.goWork({ cell: nearFree(p.cell, a.pos), look: p.look, secs: rand(2.5, 4.5), label: p.label, anim: "inspect", activity: "work", claim: false });
+  },
+};
+let INSPECT = [];
+
+/* =========================================================================
+   11. Notifikasjoner og aktivitetslogg
+   ========================================================================= */
+const notes = [];
+function note(text, color, at, life = 1.6) {
+  if (!scene) return;
+  if (notes.length > 14) { const n = notes.shift(); scene.remove(n.obj); n.obj.element.remove(); }
+  const el = document.createElement("div");
+  el.className = "note3d"; el.style.setProperty("--c", color); el.textContent = text;
+  const obj = new CSS2DObject(el);
+  obj.position.set(at.x, 2.1, at.z);
+  scene.add(obj);
+  notes.push({ obj, el, t: 0, life: 2.6 * life });
+}
+function updateNotes(dt) {
+  for (let i = notes.length - 1; i >= 0; i--) {
+    const n = notes[i];
+    n.t += dt; n.obj.position.y += dt * 0.55;
+    const k = n.t / n.life;
+    n.el.style.opacity = k < 0.1 ? k * 10 : k > 0.75 ? Math.max(0, (1 - k) * 4) : 1;
+    if (n.t >= n.life) { scene.remove(n.obj); n.el.remove(); notes.splice(i, 1); }
+  }
+}
+const feedEl = document.getElementById("feedlist");
+function feed(html, time = new Date()) {
+  const d = document.createElement("div");
+  d.innerHTML = `<time>${time.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}</time><span>${html}</span>`;
+  feedEl.prepend(d);
+  while (feedEl.children.length > 60) feedEl.lastChild.remove();
+}
+
+/* =========================================================================
+   12. Den ekte boten (vises separat fra den simulerte økonomien)
+   ========================================================================= */
+const data = { mode: "connecting", lastTs: null, state: null };
+const symOf = (msg) => (msg.match(/\$[A-Za-z0-9_.-]+/) || [""])[0];
+function handleEvents(events) {
+  for (const e of events) {
+    const s = symOf(e.msg) || "token", tm = new Date(e.ts);
+    if (e.type === "buy") { botQueue.push({ label: `Boten kjøper ${s}`, note: `Bot: kjøpte ${s}`, color: BLUE, win: false }); feed(`<b class="blue">Bot:</b> ${escapeHtml(e.msg)}`, tm); }
+    else if (e.type === "sell" || e.type === "stop") {
+      const pnl = e.data?.pnlSol, win = typeof pnl === "number" ? pnl >= 0 : e.type === "sell";
+      const txt = typeof pnl === "number" ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(4)} SOL` : "";
+      botQueue.push({ label: `Boten selger ${s}`, note: `Bot: ${win ? "gevinst" : "tap"} ${s} ${txt}`, color: win ? "#3ee09a" : "#ff5d6c", win });
+      feed(`<b class="${win ? "up" : "down"}">Bot ${win ? "gevinst" : "tap"}:</b> ${escapeHtml(e.msg)}`, tm);
+    }
+    else if (e.type === "halt") { note("Bot: dagstap-grensen nådd", "#ffb347", M.holoC || new THREE.Vector3(), 2.4); feed(`<b class="warn">Bot stoppet:</b> ${escapeHtml(e.msg)}`, tm); }
+    else if (e.type === "rug") feed(`<b class="down">Bot stoppet en rug:</b> ${escapeHtml(e.msg)}`, tm);
+    else if (e.type === "error") feed(`<b class="warn">Bot-feil:</b> ${escapeHtml(e.msg)}`, tm);
+    else if (e.type === "control") feed(`<b class="gold">Bot-kontroll:</b> ${escapeHtml(e.msg)}`, tm);
+  }
+  if (botQueue.length > 6) botQueue.splice(0, botQueue.length - 6);
+}
+async function poll() {
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const s = await res.json();
+    const first = data.mode !== "live";
+    data.mode = "live"; data.state = s;
+    const evs = s.events || [];
+    if (first) {
+      data.lastTs = evs.length ? evs[evs.length - 1].ts : new Date().toISOString();
+      feed("<b class='up'>Koblet til den ekte boten.</b> Kjøp og salg vises av traderne. Pengene i rommet er fortsatt simulert.");
+    } else {
+      const fresh = evs.filter((e) => e.ts > data.lastTs);
+      if (fresh.length) { data.lastTs = fresh[fresh.length - 1].ts; handleEvents(fresh); }
+    }
+  } catch {
+    if (data.mode !== "demo") { data.mode = "demo"; feed("<b class='warn'>Fant ikke boten.</b> Pengerommet kjører som ren simulering. Start boten med <b>npm start</b> for å se ekte handler."); }
+  }
+  renderBot();
+}
+function renderBot() {
+  const pill = $("botpill"), s = data.state;
+  if (data.mode === "live" && s) {
+    const dry = s.mode === "dry";
+    pill.className = "pill " + (dry ? "dry" : "live");
+    pill.textContent = dry ? "Ekte bot · DRY RUN" : "Ekte bot · LIVE";
+    const tot = s.stats.realizedSol, day = s.day.realizedPnlSol, px = s.solUsd;
+    const usd = (v) => (typeof px === "number" ? ` (${v < 0 ? "−" : "+"}$${Math.abs(v * px).toFixed(2)})` : "");
+    $("botres").innerHTML = `${s.halted ? "<span class='warn'>Stoppet for i dag</span>" : s.paused ? "<span class='warn'>Kjøp pauset</span>" : "Resultat"}<span class="${tot >= 0 ? "up" : "down"}">${tot >= 0 ? "+" : ""}${tot.toFixed(4)} SOL${usd(tot)}</span> · I dag<span class="${day >= 0 ? "up" : "down"}">${day >= 0 ? "+" : ""}${day.toFixed(4)} SOL${usd(day)}</span><span class="muted">${dry ? "(simulert med ekte priser)" : "(ekte penger)"}</span>`;
+    $("b-botpause").hidden = false;
+    $("b-botpause").textContent = s.paused ? "Fortsett kjøp" : "Pause kjøp";
+  } else {
+    pill.className = "pill off";
+    pill.textContent = data.mode === "demo" ? "Ekte bot: kjører ikke" : "Ekte bot: kobler til…";
+    $("botres").textContent = "";
+    $("b-botpause").hidden = true;
+  }
+}
+
+/* =========================================================================
+   13. Grensesnitt
+   ========================================================================= */
+const $ = (id) => document.getElementById(id);
+const sim = { paused: false, speed: 1, speeds: [0.25, 0.5, 1, 2, 4] };
+let selected = null, follow = false;
+
+for (const k of ROLE_KEYS) { const o = document.createElement("option"); o.value = k; o.textContent = ROLES[k].name; $("role-sel").appendChild(o); }
+
+function drawSpark() {
+  const c = $("w-spark"), x = c.getContext("2d"), d = eco.hist, w = c.width, h = c.height;
+  x.clearRect(0, 0, w, h);
+  if (d.length < 2) return;
+  const mn = Math.min(...d), mx = Math.max(...d), rg = mx - mn || 1;
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "rgba(232,192,106,.35)"); g.addColorStop(1, "rgba(232,192,106,0)");
+  x.beginPath(); d.forEach((v, i) => { const X = (i / (d.length - 1)) * w, Y = h - 4 - ((v - mn) / rg) * (h - 10); i ? x.lineTo(X, Y) : x.moveTo(X, Y); });
+  x.strokeStyle = "#e8c06a"; x.lineWidth = 2.5; x.stroke();
+  x.lineTo(w, h); x.lineTo(0, h); x.fillStyle = g; x.fill();
+}
+
+function renderDash(fps) {
+  const w = eco.wealth;
+  $("w-total").textContent = money(w);
+  const pct = eco.start ? ((w - eco.start) / eco.start) * 100 : 0;
+  $("w-day").textContent = `${pct >= 0 ? "+" : ""}${pct.toFixed(2).replace(".", ",")} %`;
+  $("w-day").className = pct >= 0 ? "up" : "down";
+  $("w-vault").textContent = money(eco.vault);
+  $("w-mountain").textContent = money(eco.mountain);
+  $("w-float").textContent = money(w - eco.vault - eco.mountain);
+  $("f-col").textContent = moneyShort(eco.collected);
+  $("f-dep").textContent = moneyShort(eco.deposited);
+  $("f-proc").textContent = moneyShort(eco.processed);
+  const hd = eco.hist, span = Math.min(60, hd.length - 1);
+  const net = span > 0 ? ((hd[hd.length - 1] - hd[hd.length - 1 - span]) / span) * 60 : 0;
+  $("f-net").textContent = `${net >= 0 ? "+" : "−"}${moneyShort(Math.abs(net))}`;
+  $("f-net").className = net >= 0 ? "up" : "down";
+  $("f-line").innerHTML = `${belt.count()} bunter på båndet · ${dock.count} på rampa<br>${machines.filter((m) => m.counting > 0).length} av ${machines.length} tellemaskiner i gang · døra ${door.open > 0.05 ? "<span class='gold'>åpen</span>" : "lukket"}`;
+  drawSpark();
+  // agentstatus
+  $("a-on").textContent = agents.length;
+  $("a-work").textContent = agents.filter((a) => a.state === "working" || a.state === "communicating").length;
+  $("a-col").textContent = agents.filter((a) => a.activity === "collect").length;
+  $("a-tr").textContent = agents.filter((a) => a.activity === "transport").length;
+  $("a-idle").textContent = agents.filter((a) => a.state === "idle" || a.activity === "idle").length;
+  $("a-roles").innerHTML = ROLE_KEYS.map((k) => `<span style="--c:${ROLES[k].color}">${ROLES[k].name} ${agents.filter((a) => a.role === k).length}</span>`).join("");
+  $("a-perf").textContent = `${Math.round(fps)} FPS · ${rain.n + wf.n} sedler i lufta · ${stats.done} oppgaver`;
+  $("simstate").textContent = sim.paused ? "Pauset" : `Kjører ${sim.speed}x`;
+  if (selected) renderInspector();
+}
+
+function renderInspector() {
+  const a = selected;
+  $("i-dot").style.color = a.cfg.color;
+  $("i-name").textContent = a.name;
+  $("i-role").textContent = `${a.cfg.name} · ${a.cfg.desc}`;
+  $("i-state").textContent = STATE_TEXT[a.state] || a.state;
+  $("i-task").textContent = a.label || "–";
+  $("i-carry").textContent = a.cart ? `Tralle, ${a.cart.load} bunter` : a.carryValue ? money(a.carryValue) : "–";
+  $("i-done").textContent = a.done;
+  $("i-speed").textContent = a.speed.toFixed(1) + " m/s";
+  $("i-follow").classList.toggle("on", follow);
+}
+
+function select(a) {
+  if (selected) { selected.selected = false; selected.updateTag(true); }
+  selected = a; follow = false;
+  $("inspect").hidden = !a;
+  if (a) { a.selected = true; a.updateTag(true); renderInspector(); }
+}
+
+function spawn(role, cell) {
+  if (!cell) {
+    for (let i = 0; i < 60; i++) {
+      const x = Math.floor(rand(1, W - 1)), z = Math.floor(rand(1, H - 1));
+      if (free(x, z) && !SPOTSET.has(x + "," + z)) { cell = [x, z]; break; }
+    }
+  }
+  const a = new Agent(role, cell || [17, 17]);
+  agents.push(a);
+  return a;
+}
+function populate() {
+  const per = isMobile ? { collector: 3, counter: 2, trader: 3, manager: 2, vault: 2 } : { collector: 6, counter: 4, trader: 5, manager: 3, vault: 4 };
+  for (const [role, n] of Object.entries(per)) for (let i = 0; i < n; i++) spawn(role);
+}
+
+function newPile() {
+  if (piles.length >= 16) { feed("<b class='warn'>Det er ikke plass til flere hauger.</b>"); return; }
+  for (let i = 0; i < 80; i++) {
+    const x = Math.floor(rand(2, W - 3)), z = Math.floor(rand(2, H - 3));
+    let ok = true;
+    for (let dz = -1; dz <= 1 && ok; dz++) for (let dx = -1; dx <= 1 && ok; dx++) if (!free(x + dx, z + dz) || SPOTSET.has(x + dx + "," + (z + dz))) ok = false;
+    if (!ok || zones.some((zn) => zn.cell[0] === x && zn.cell[1] === z) || agents.some((a) => a.pos.distanceTo(cw(x, z)) < 0.9) || carts.some((c) => c.cell[0] === x && c.cell[1] === z)) continue;
+    const n = Math.round(rand(14, 28)), p = addPile([x, z], n, Math.random() < 0.35);
+    note(`+${money(n * BUNDLE)} ny pengehaug (simulert)`, GOLD, p.pos, 1.6);
+    feed(`<b class="gold">Ny pengehaug</b> med ${n} bunter (${money(n * BUNDLE)}).`);
+    return;
+  }
+  feed("<b class='warn'>Fant ingen ledig plass til en ny haug.</b>");
+}
+
+function reset() {
+  select(null);
+  for (const a of agents) a.dispose();
+  agents.length = 0;
+  spotOcc.clear();
+  botQueue.length = 0;
+  for (const n of notes) { scene.remove(n.obj); n.el.remove(); }
+  notes.length = 0;
+  agentSeq = 0;
+  resetEconomy();
+  populate();
+  eco.wealth = eco.start = wealth();
+  feed("<b>Simuleringen er nullstilt.</b>");
+}
+
+function setFx(on) {
+  fx.on = on;
+  $("b-fx").classList.toggle("on", on);
+  if (!renderer) return;
+  bloom.enabled = tiltH.enabled = tiltV.enabled = on;
+  if (reflector) reflector.visible = on;
+  floorMat.transparent = on && !!reflector; floorMat.opacity = on && reflector ? 0.8 : 1; floorMat.needsUpdate = true;
+  for (const b of M.beams) b.visible = on;
+  M.particles.visible = on;
+}
+function setRain(l) { rain.level = Math.max(0, Math.min(rain.levels.length - 1, l)); $("rainval").textContent = `${rain.level}/${rain.levels.length - 1}`; }
+function setUi(on) { fx.ui = on; document.body.classList.toggle("ui-hidden", !on); $("b-ui").textContent = on ? "Skjul UI" : "Vis UI"; $("b-ui").classList.toggle("on", on); }
+
+$("b-pause").onclick = () => { sim.paused = !sim.paused; $("b-pause").textContent = sim.paused ? "Fortsett" : "Pause"; $("b-pause").classList.toggle("hot", sim.paused); };
+$("b-slow").onclick = () => { const i = sim.speeds.indexOf(sim.speed); sim.speed = sim.speeds[Math.max(0, i - 1)]; $("speed").textContent = sim.speed + "x"; };
+$("b-fast").onclick = () => { const i = sim.speeds.indexOf(sim.speed); sim.speed = sim.speeds[Math.min(sim.speeds.length - 1, i + 1)]; $("speed").textContent = sim.speed + "x"; };
+$("b-rainless").onclick = () => setRain(rain.level - 1);
+$("b-rainmore").onclick = () => setRain(rain.level + 1);
+$("b-spawn").onclick = () => { if (!scene) return; const role = $("role-sel").value; const a = spawn(role); note(`Ny ${ROLES[role].name.toLowerCase()}: ${a.name}`, ROLES[role].color, a.pos, 1.2); feed(`${a.tagHtml()} startet som ${ROLES[role].name.toLowerCase()}.`); };
+$("b-pile").onclick = () => scene && newPile();
+$("b-ui").onclick = () => setUi(!fx.ui);
+$("b-labels").onclick = () => { fx.labels = !fx.labels; document.body.classList.toggle("hide-labels", !fx.labels); $("b-labels").classList.toggle("on", fx.labels); };
+$("b-fx").onclick = () => setFx(!fx.on);
+$("b-reset").onclick = () => scene && reset();
+$("i-close").onclick = () => select(null);
+$("i-follow").onclick = () => { follow = !follow; userMoved = true; renderInspector(); };
+$("b-botpause").onclick = async () => {
+  const s = data.state; if (!s) return;
+  try { await fetch(s.paused ? "/api/resume" : "/api/pause", { method: "POST", headers: { "content-type": "application/json", "x-sigarsjefen": "1" }, body: "{}" }); } catch {}
+  poll();
+};
+addEventListener("keydown", (e) => {
+  if (e.target.closest("select,input")) return;
+  if (e.key === " ") { e.preventDefault(); $("b-pause").click(); }
+  else if (e.key === "h" || e.key === "H") setUi(!fx.ui);
+});
+if (location.protocol === "file:" || (!location.host.includes("localhost") && !location.host.includes("127.0.0.1"))) $("b-classic").hidden = true;
+
+/* =========================================================================
+   14. Start og hovedløkke
+   ========================================================================= */
+let userMoved = false;
+const PROF = params.has("prof") ? [] : null;
+window.__prof = PROF;
+setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("nb-NO", { hour12: false }); }, 1000);
+
+if (renderer) {
+  buildLayout();
+  initMaterials();
+  initAgentGeo();
+  buildRoom();
+  INSPECT = [
+    { cell: [3, 5], look: machines[0].center, label: "Inspiserer tellemaskinene" },
+    { cell: [3, 13], look: machines[2].center, label: "Sjekker telleverket" },
+    { cell: [9, 1], look: new THREE.Vector3(cw(9, 0).x, 0.8, belt.z), label: "Kontrollerer båndet" },
+    { cell: [12, 8], look: TABLE_C, label: "Vurderer pengefjellet" },
+    { cell: [23, 15], look: TABLE_C, label: "Vurderer pengefjellet" },
+    { cell: [32, 12], look: DOOR_LOOK, label: "Kontrollerer hvelvdøra" },
+    { cell: [32, 18], look: new THREE.Vector3(W / 2, 1, cw(0, 18).z), label: "Teller beholdningen" },
+    { cell: [12, 21], look: M.holoC, label: "Følger med på traderne" },
+    { cell: [23, 21], look: M.holoC, label: "Følger med på traderne" },
+    { cell: [17, 6], look: TABLE_C, label: "Inspiserer pengeregnet" },
+    { cell: [28, 2], look: DOCK_C, label: "Sjekker lasterampa" },
+  ];
+  initRain();
+  resetEconomy();
+  populate();
+  setFx(fx.on);
+  setRain(isMobile ? 2 : 3);
+  eco.wealth = eco.start = wealth();
+  eco.hist.push(eco.wealth);
+  feed("<b class='gold'>Pengerommet er åpent.</b> Alle beløp her er simulert demodata.");
+
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  let downAt = null;
+  renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; userMoved = true; });
+  renderer.domElement.addEventListener("wheel", () => (userMoved = true), { passive: true });
+  renderer.domElement.addEventListener("pointerup", (e) => {
+    if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+    mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(mouse, camera);
+    const hit = ray.intersectObjects(agents.map((a) => a.hit), false)[0];
+    select(hit ? hit.object.userData.agent : null);
+  });
+
+  // Rolig filmkamera som svinger litt fram og tilbake til brukeren tar over
+  const camOff = camera.position.clone().sub(controls.target), sph = new THREE.Spherical().setFromVector3(camOff), baseTheta = sph.theta;
+  let simTime = 0, frames = 0, fpsAcc = 0, fps = 60, lowFps = 0, screenAcc = 0, hudAcc = 0, slowAcc = 0;
+  const loop = () => {
+    requestAnimationFrame(loop);
+    const raw = Math.min(clock.getDelta(), 0.1);
+    const dt = sim.paused ? 0 : raw * sim.speed;
+    simTime += dt;
+
+    const T0 = performance.now();
+    for (const a of agents) a.update(dt);
+    const T1 = performance.now();
+    if (dt) {
+      updateRain(dt, simTime);
+      updateWaterfall(dt);
+      belt.update(dt);
+      updateDoor(dt, simTime);
+      eco.histT += dt;
+      if (eco.histT >= 1) { eco.histT = 0; eco.hist.push(eco.wealth); if (eco.hist.length > 180) eco.hist.shift(); }
+    }
+    for (const f of animated) f(simTime, dt);
+    updateNotes(raw);
+    updateCounts();
+    slowAcc += raw;
+    if (slowAcc > 0.2) { slowAcc = 0; if (zonesDirty) rebuildZones(); if (pilesDirty) rebuildPiles(); eco.wealth = wealth(); }
+
+    screenAcc += raw;
+    if (screenAcc > 0.5) { screenAcc = 0; for (const s of screens) s.draw(s, simTime); }
+
+    if (!userMoved) { sph.theta = baseTheta + Math.sin(performance.now() / 1000 * 0.05) * 0.22; camera.position.setFromSpherical(sph).add(controls.target); }
+    if (follow && selected) controls.target.lerp(selected.pos, 0.08);
+    controls.update();
+    const T2 = performance.now();
+    if (fx.on) composer.render(); else renderer.render(scene, camera);
+    const T3 = performance.now();
+    labelRenderer.render(scene, camera);
+    if (PROF) { const T4 = performance.now(); PROF.push([T1 - T0, T2 - T1, T3 - T2, T4 - T3]); if (PROF.length > 50) PROF.shift(); }
+
+    frames++; fpsAcc += raw; hudAcc += raw;
+    if (hudAcc >= 0.5) { hudAcc = 0; renderDash(fps); }
+    if (fpsAcc >= 1) {
+      fps = frames / fpsAcc; frames = 0; fpsAcc = 0;
+      lowFps = fps < 28 ? lowFps + 1 : 0;
+      if (!params.has("noguard") && lowFps >= 4) {
+        lowFps = 0;
+        if (fx.on) { setFx(false); feed("<b class='warn'>Filmlys slått av</b> for å holde farten oppe."); }
+        else if (rain.level > 2) { setRain(rain.level - 1); feed("<b class='warn'>Mindre pengeregn</b> for å holde farten oppe."); }
+      }
+    }
+  };
+  loop();
+  setTimeout(() => ($("loading").style.opacity = 0), 500);
+}
+
+poll();
+setInterval(poll, 2000);
+window.__lab = { agents, eco, stats, sim, rain, belt, dock, machines, carts, piles, zones, door, wealth };
+</script>
+</body>
+</html>
