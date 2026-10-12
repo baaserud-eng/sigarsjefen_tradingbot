@@ -19,7 +19,7 @@ interface DexPair {
 }
 
 /** Henter fakta om en token fra Solana RPC og DexScreener. */
-export async function fetchTokenFacts(conn: Connection, mintStr: string): Promise<TokenFacts> {
+export async function fetchTokenFacts(conn: Connection, mintStr: string, minLiquidityUsd = 0): Promise<TokenFacts> {
   const mint = new PublicKey(mintStr);
 
   // 1) Mint-kontoen: authorities, supply og Token-2022-utvidelser
@@ -44,27 +44,7 @@ export async function fetchTokenFacts(conn: Connection, mintStr: string): Promis
     }
   }
 
-  // 2) Topp-holdere. Kontoer eid av program (pooler, bonding curves, låser) har eier
-  //    utenfor ed25519-kurven, så de trekkes fra for å finne vanlige lommebøker.
-  let top10HolderPct: number | null = null;
-  try {
-    const largest = await conn.getTokenLargestAccounts(mint);
-    const accounts = largest.value.slice(0, 20);
-    const infos = await conn.getMultipleParsedAccounts(accounts.map((a) => a.address));
-    const walletAmounts: number[] = [];
-    infos.value.forEach((ai, i) => {
-      const owner: string | undefined = (ai?.data as ParsedAccountData | undefined)?.parsed?.info?.owner;
-      if (!owner) return;
-      if (!PublicKey.isOnCurve(new PublicKey(owner).toBytes())) return; // program-eid: hopp over
-      walletAmounts.push(Number(accounts[i]!.amount));
-    });
-    const top10 = walletAmounts.sort((a, b) => b - a).slice(0, 10).reduce((s, x) => s + x, 0);
-    top10HolderPct = supply > 0 ? (top10 / supply) * 100 : null;
-  } catch {
-    top10HolderPct = null;
-  }
-
-  // 3) Likviditet og alder fra DexScreener (gratis, ingen nøkkel)
+  // 2) Likviditet og alder fra DexScreener (gratis, ingen nøkkel)
   let liquidityUsd: number | null = null;
   let poolAgeMinutes: number | null = null;
   let symbol: string | undefined;
@@ -82,6 +62,27 @@ export async function fetchTokenFacts(conn: Connection, mintStr: string): Promis
     }
   } catch {
     liquidityUsd = null;
+  }
+
+  // 3) Topp-holdere. Kontoer eid av program (pooler, bonding curves, låser) har eier
+  //    utenfor ed25519-kurven, så de trekkes fra for å finne vanlige lommebøker.
+  let top10HolderPct: number | null = null;
+  // Er likviditeten for lav, avvises tokenen uansett. Da sparer vi to kall mot Helius.
+  if (liquidityUsd !== null && liquidityUsd >= minLiquidityUsd) try {
+    const largest = await conn.getTokenLargestAccounts(mint);
+    const accounts = largest.value.slice(0, 20);
+    const infos = await conn.getMultipleParsedAccounts(accounts.map((a) => a.address));
+    const walletAmounts: number[] = [];
+    infos.value.forEach((ai, i) => {
+      const owner: string | undefined = (ai?.data as ParsedAccountData | undefined)?.parsed?.info?.owner;
+      if (!owner) return;
+      if (!PublicKey.isOnCurve(new PublicKey(owner).toBytes())) return; // program-eid: hopp over
+      walletAmounts.push(Number(accounts[i]!.amount));
+    });
+    const top10 = walletAmounts.sort((a, b) => b - a).slice(0, 10).reduce((s, x) => s + x, 0);
+    top10HolderPct = supply > 0 ? (top10 / supply) * 100 : null;
+  } catch {
+    top10HolderPct = null;
   }
 
   return {

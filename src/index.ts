@@ -166,6 +166,8 @@ async function main() {
         for (const c of candidates) {
           if (!running || risk.state.halted || trader.paused) break;
           await trader.consider(c.mint, c.source);
+          // Litt pause mellom hver sjekk, så gratisplanen hos Helius ikke blokkerer oss (429).
+          await sleep(400);
         }
         lastBalance = await trader.balanceSol();
       }

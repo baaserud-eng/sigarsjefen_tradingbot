@@ -59,8 +59,8 @@ export class Trader {
       const safety = await this.d.checkSafety(mint);
       const name = safety.symbol ? `$${safety.symbol}` : short(mint);
       if (!safety.passed) {
-        const worst = safety.findings.find((f) => f.severity === "critical") ?? safety.findings[0];
-        log(worst?.severity === "critical" ? "rug" : "safety", `${name} avvist · score ${safety.score} · ${worst?.reason ?? ""}`, { mint, source, score: safety.score, symbol: safety.symbol });
+        const worst = safety.findings.find((f) => f.rug) ?? safety.findings.find((f) => f.severity === "critical") ?? safety.findings[0];
+        log(worst?.rug ? "rug" : "safety", `${name} avvist · score ${safety.score} · ${worst?.reason ?? ""}`, { mint, source, score: safety.score, symbol: safety.symbol });
         return "rejected";
       }
 

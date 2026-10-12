@@ -101,7 +101,7 @@ export function tradeStats(): TradeStats {
 
 export function log(type: EventType, msg: string, data?: Record<string, unknown>): BotEvent {
   const ev: BotEvent = { ts: new Date().toISOString(), type, msg, ...(data ? { data } : {}) };
-  const time = ev.ts.slice(11, 19);
+  const time = new Date(ev.ts).toLocaleTimeString("nb-NO", { hour12: false });
   const c = colors[type] ?? "\x1b[90m";
   console.log(`${time} ${c}${type.toUpperCase().padEnd(10)}\x1b[0m ${msg}`);
   track(ev);
